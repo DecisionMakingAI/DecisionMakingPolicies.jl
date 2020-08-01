@@ -1,0 +1,13 @@
+name = "Policies"
+uuid = "4cd5d487-2a85-4602-baee-1f5c94b6a44c"
+authors = ["Scott Jordan"]
+version = "0.1.0"
+
+[compat]
+julia = "0.0.1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
