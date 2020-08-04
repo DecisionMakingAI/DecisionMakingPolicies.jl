@@ -46,6 +46,7 @@ p3 = StatelessNormal()
 p4 = LinearNormal()
 θ4 = initparams(p4, Float32, 25, 20)
 
+tp = initparams(p4, Float32, 3, 2, Float32(1.0))
 
 function tmp2(θ)
     N = round(Int,length(θ)/2)

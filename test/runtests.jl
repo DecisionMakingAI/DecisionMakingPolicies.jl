@@ -3,7 +3,6 @@ using Test
 
 
 @testset "Policies.jl" begin
-    # Write your tests here.
+    @testset "SoftmaxTests" begin include("softmaxtests.jl") end
+    @testset "NormalTests" begin include("normaltests.jl") end
 end
-
-@testset "SoftmaxTests" begin include("softmaxtests.jl") end
