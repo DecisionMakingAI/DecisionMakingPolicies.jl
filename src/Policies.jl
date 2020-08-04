@@ -31,8 +31,9 @@ export ParameterizedPolicy, ParameterizedStatelessPolicy
 
 function sample_with_trace end
 function compatiable_features end
+function init_params end
 
-export logpdf, grad_logpdf!, sample_with_trace!
+export logpdf, grad_logpdf!, sample_with_trace!, initparams
 
 
 function logpdf(π::AbstractPolicy, θ, s, a)
@@ -103,9 +104,8 @@ function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
     return logp
 end
 
-include("stateless.jl")
-include("linearsoftmax.jl")
-include("linearnormal.jl")
+include("softmax.jl")
+include("normal.jl")
 
 
 end
