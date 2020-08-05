@@ -61,8 +61,8 @@ logp = logpdf(d, action)  # get the log density/probability using Distributions.
 The above code should work for most distributions and functions, however the computations are not always optimal. To allow more efficient implementations we define functions ``logpdf(π, θ, [s,] a)``, ``grad_logpdf!(ψ, π, θ, s, a)`` and ``sample_with_trace!(ψ, A, π, s)`` that can compute the same quantities as above, but can be specialized to each policy to decrease computation time and memory allocations.
 
 - ``logpdf(π, θ, [s,] a)`` often just computes the density directly instead relying on the distributions implementation.
-- ``grad_logpdf!(ψ, π, θ, s, a)`` computes the gradient with respect to $\theta$ and stores it in $\psi$. It also returns ``logpdf(π, θ, s, a)`` since these are commonly needed together and easy to compute at the same time.
-- ``sample_with_trace!(ψ, A, π, θ, s)`` samples an action storing it in A and computes the gradient storing it in $\psi$ and returns ``logpdf(π, θ, s, a)``. This function makes online algorithms significantly more efficient.
+- ``grad_logpdf!(ψ, π, θ, s, a)`` computes the gradient with respect to ``θ`` and stores it in ``ψ``. It also returns ``logpdf(π, θ, s, a)`` since these are commonly needed together and easy to compute at the same time.
+- ``sample_with_trace!(ψ, A, π, θ, s)`` samples an action storing it in A and computes the gradient storing it in ``ψ`` and returns ``logpdf(π, θ, s, a)``. This function makes online algorithms significantly more efficient.
 
 Currently, we provide efficient implementations for:
 

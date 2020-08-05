@@ -1,3 +1,6 @@
+using Policies
+using Test
+
 import Zygote: gradient
 
 @testset "Stateless Softmax Tests" begin

@@ -1,8 +1,6 @@
-using Policies
-using Test
+using SafeTestsets
 
 
-@testset "Policies.jl" begin
-    @testset "SoftmaxTests" begin include("softmaxtests.jl") end
-    @testset "NormalTests" begin include("normaltests.jl") end
-end
+
+@safetestset "SoftmaxTests" begin include("softmaxtests.jl") end
+@safetestset "NormalTests" begin include("normaltests.jl") end
