@@ -1,7 +1,8 @@
 module Policies
 
-# Write your package code here.
-import Distributions: logpdf
+using DistributionsAD
+import Flux: softmax
+import Distributions: logpdf, Categorical, Normal, MvNormal
 import Zygote
 
 abstract type AbstractPolicy end

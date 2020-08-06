@@ -1,5 +1,5 @@
-import Distributions: Categorical
-import Flux: softmax
+# import Distributions: Categorical
+# import Flux: softmax
 
 struct StatelessSoftmax <: AbstractStatelessPolicy end
 struct LinearSoftmax <: AbstractPolicy end
