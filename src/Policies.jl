@@ -1,7 +1,7 @@
 module Policies
 
 using DistributionsAD
-import Flux: softmax
+import NNlib: softmax
 import Distributions: logpdf, Categorical, Normal, MvNormal
 import Zygote
 

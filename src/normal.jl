@@ -1,4 +1,3 @@
-# import Distributions: Normal, MvNormal
 
 struct StatelessNormal <: AbstractStatelessPolicy end
 struct LinearNormal <: AbstractPolicy end

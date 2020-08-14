@@ -1,6 +1,3 @@
-# import Distributions: Categorical
-# import Flux: softmax
-
 struct StatelessSoftmax <: AbstractStatelessPolicy end
 struct LinearSoftmax <: AbstractPolicy end
 
@@ -14,7 +11,7 @@ function initparams(π::StatelessSoftmax, ::Type{T}, action_dim::Int) where {T}
 end
 
 function initparams(π::StatelessSoftmax, action_dim::Int)
-    return init_params(π, Float64, action_dim)
+    return initparams(π, Float64, action_dim)
 end
 
 function (π::StatelessSoftmax)(θ)
