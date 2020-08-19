@@ -1,4 +1,4 @@
-module Policies
+module DecisionMakingPolicies
 
 using DistributionsAD
 import NNlib: softmax
