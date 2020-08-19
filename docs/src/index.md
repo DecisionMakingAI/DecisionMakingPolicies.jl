@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = Policies
+CurrentModule = DecisionMakingPolicies
 ```
 
 # Policies
@@ -8,5 +8,5 @@ CurrentModule = Policies
 ```
 
 ```@autodocs
-Modules = [Policies]
+Modules = [DecisionMakingPolicies]
 ```

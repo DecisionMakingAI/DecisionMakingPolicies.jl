@@ -1,14 +1,14 @@
-using Policies
+using DecisionMakingPolicies
 using Documenter
 
 makedocs(;
-    modules=[Policies],
+    modules=[DecisionMakingPolicies],
     authors="Scott Jordan",
-    repo="https://github.com/DecisionMakingAI/Policies.jl/blob/{commit}{path}#L{line}",
-    sitename="Policies.jl",
+    repo="https://github.com/DecisionMakingAI/DecisionMakingPolicies.jl/blob/{commit}{path}#L{line}",
+    sitename="DecisionMakingPolicies.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://DecisionMakingAI.github.io/Policies.jl",
+        canonical="https://DecisionMakingAI.github.io/DecisionMakingPolicies.jl",
         assets=String[],
     ),
     pages=[
@@ -17,5 +17,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/DecisionMakingAI/Policies.jl",
+    repo="github.com/DecisionMakingAI/DecisionMakingPolicies.jl",
 )
