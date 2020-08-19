@@ -1,4 +1,4 @@
-using Policies
+using DecisionMakingPolicies
 using Test
 
 import Zygote: gradient
