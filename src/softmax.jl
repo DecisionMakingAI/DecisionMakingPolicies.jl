@@ -57,7 +57,7 @@ function initparams(π::LinearSoftmax, ::Type{T}, feature_dim::Int, action_dim::
 end
 
 function initparams(π::LinearSoftmax, feature_dim::Int, action_dim::Int)
-    return init_params(π, Float64, feature_dim, action_dim)
+    return initparams(π, Float64, feature_dim, action_dim)
 end
 
 function logpdf(π::LinearSoftmax, θ, s, a)
