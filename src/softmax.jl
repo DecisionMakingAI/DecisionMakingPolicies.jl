@@ -19,6 +19,10 @@ function (π::StatelessSoftmax)(θ)
     return Categorical(p)
 end
 
+function (π::StatelessSoftmax)(θ, s)
+    return π(θ)
+end
+
 function logpdf(π::StatelessSoftmax, θ, a)
     p = softmax(θ)
     return log(p[a])
