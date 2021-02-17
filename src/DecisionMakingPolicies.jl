@@ -1,7 +1,8 @@
 module DecisionMakingPolicies
 
 using DistributionsAD
-import NNlib: softmax
+using LinearAlgebra
+import NNlib: softmax, softmax!
 import Distributions: logpdf, Categorical, Normal, MvNormal
 import Zygote
 
@@ -19,6 +20,11 @@ struct ParameterizedStatelessPolicy{T} <: AbstractStatelessPolicy where {T}
     f::T
 end
 
+struct LinearPolicyWithBasis{TP, TB} <: AbstractPolicy where {T, TB}
+    π::TP
+    ϕ::TB
+end
+
 function (π::ParameterizedPolicy)(θ, s)
     return π.f(θ, s)
 end
@@ -27,8 +33,14 @@ function (π::ParameterizedStatelessPolicy)(θ)
     return π.f(θ)
 end
 
+function (π::LinearPolicyWithBasis)(θ, s)
+    feats = π.ϕ(s)
+    return π.π(θ, feats)    
+end
+
 
 export ParameterizedPolicy, ParameterizedStatelessPolicy
+export LinearPolicyWithBasis
 
 function sample_with_trace end
 function compatiable_features end
@@ -42,6 +54,11 @@ function logpdf(π::AbstractPolicy, θ, s, a)
     return logpdf(d, a)
 end
 
+function logpdf(π::LinearPolicyWithBasis, θ, s, a)
+    feats = π.ϕ(s)
+    return logpdf(π.π, θ, feats, a)
+end
+
 function logpdf(π::AbstractStatelessPolicy, θ, a)
     d = π(θ)
     return logpdf(d, a)
@@ -50,6 +67,13 @@ end
 function grad_logpdf!(ψ, π::AbstractPolicy, θ, s, a)
     logp, back = Zygote.pullback((θ)->logpdf(π, θ, s, a), θ)
     ψ .= back(1)[1]
+    return logp
+end
+
+function grad_logpdf!(ψ, π::LinearPolicyWithBasis, θ, s, a)
+    feats = π.ϕ(s)
+    logp = grad_logpdf!(ψ, π.π, θ, feats, a)
+    return logp
 end
 
 function grad_logpdf!(ψ, π::AbstractStatelessPolicy, θ, a)
@@ -81,6 +105,13 @@ function sample_with_trace!(ψ, action, π::AbstractPolicy, θ, s)
     return logp
 end
 
+function sample_with_trace!(ψ, action, π::LinearPolicyWithBasis, θ, s)
+    feats = π.ϕ(s)
+    logp = sample_with_trace!(ψ, action, π.π, θ, feats)
+    return logp
+end
+
+
 function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
     function f!(res, π, θ)
         d = π(θ)
@@ -104,6 +135,8 @@ function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
     ψ .= back(1)[1]
     return logp
 end
+
+
 
 include("softmax.jl")
 include("normal.jl")
