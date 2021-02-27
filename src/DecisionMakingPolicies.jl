@@ -29,66 +29,69 @@ struct LinearPolicyWithBasis{TP, TB} <: AbstractPolicy where {T, TB}
     ϕ::TB
 end
 
-function (π::ParameterizedPolicy)(θ, s)
-    return π.f(θ, s)
+function (π::ParameterizedPolicy)(s)
+    return π.f(s)
 end
 
-function (π::ParameterizedStatelessPolicy)(θ)
-    return π.f(θ)
+function (π::ParameterizedStatelessPolicy)()
+    return π.f()
 end
 
-function (π::LinearPolicyWithBasis)(θ, s)
+function (π::LinearPolicyWithBasis)(s)
     feats = π.ϕ(s)
-    return π.π(θ, feats)    
+    return π.π(feats)    
+end
+
+function (π::LinearPolicyWithBasis)(s)
+    feats = π.ϕ(s)
+    return π.π(feats)    
 end
 
 
 export ParameterizedPolicy, ParameterizedStatelessPolicy
 export LinearPolicyWithBasis
 
-function sample_with_trace end
-function compatiable_features end
-function init_params end
+function sample_with_trace! end
 
 export logpdf, logpdf!, grad_logpdf!, sample_with_trace!, initparams
 
 
-function logpdf(π::AbstractPolicy, θ, s, a)
-    d = π(θ, s)
+function logpdf(π::AbstractPolicy, s, a)
+    d = π(s)
     return logpdf(d, a)
 end
 
-function logpdf(π::LinearPolicyWithBasis, θ, s, a)
+function logpdf(π::LinearPolicyWithBasis, s, a)
     feats = π.ϕ(s)
-    return logpdf(π.π, θ, feats, a)
+    return logpdf(π.π, feats, a)
 end
 
-function logpdf(π::AbstractStatelessPolicy, θ, a)
-    d = π(θ)
+function logpdf(π::AbstractStatelessPolicy, a)
+    d = π()
     return logpdf(d, a)
 end
 
-function grad_logpdf!(ψ, π::AbstractPolicy, θ, s, a)
-    logp, back = Zygote.pullback((θ)->logpdf(π, θ, s, a), θ)
+function grad_logpdf!(ψ, π::AbstractPolicy, s, a)
+    logp, back = Zygote.pullback((π)->logpdf(π, s, a), π)
     ψ .= back(1)[1]
     return logp
 end
 
-function grad_logpdf!(ψ, π::LinearPolicyWithBasis, θ, s, a)
+function grad_logpdf!(ψ, π::LinearPolicyWithBasis, s, a)
     feats = π.ϕ(s)
-    logp = grad_logpdf!(ψ, π.π, θ, feats, a)
+    logp = grad_logpdf!(ψ, π.π, feats, a)
     return logp
 end
 
-function grad_logpdf!(ψ, π::AbstractStatelessPolicy, θ, a)
-    logp, back = Zygote.pullback((θ)->logpdf(π, θ, a), θ)
+function grad_logpdf!(ψ, π::AbstractStatelessPolicy, a)
+    logp, back = Zygote.pullback((π)->logpdf(π, a), π)
     ψ .= back(1)[1]
     return logp
 end
 
-function sample_with_trace!(ψ, action, π::AbstractPolicy, θ, s)
-    function f!(res, π, θ, s)
-        d = π(θ, s)
+function sample_with_trace!(ψ, action, π::AbstractPolicy, s)
+    function f!(res, π, s)
+        d = π(s)
 
         Zygote.ignore() do
             a = rand(d)
@@ -104,21 +107,21 @@ function sample_with_trace!(ψ, action, π::AbstractPolicy, θ, s)
             return logpdf(d, res[1])
         end
     end
-    logp, back = Zygote.pullback(θ->f!(action, π, θ, s), θ)
+    logp, back = Zygote.pullback(π->f!(action, π, s), π)
     ψ .= back(1)[1]
     return logp
 end
 
-function sample_with_trace!(ψ, action, π::LinearPolicyWithBasis, θ, s)
+function sample_with_trace!(ψ, action, π::LinearPolicyWithBasis, π, s)
     feats = π.ϕ(s)
-    logp = sample_with_trace!(ψ, action, π.π, θ, feats)
+    logp = sample_with_trace!(ψ, action, π.π, π, feats)
     return logp
 end
 
 
-function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
-    function f!(res, π, θ)
-        d = π(θ)
+function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy)
+    function f!(res, π)
+        d = π()
 
         Zygote.ignore() do
             a = rand(d)
@@ -127,7 +130,6 @@ function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
             else
                 res .= a
             end
-            # println(a, res)
         end
         if length(d) > 2
             return logpdf(d, res)
@@ -135,7 +137,7 @@ function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy, θ)
             return logpdf(d, res[1])
         end
     end
-    logp, back = Zygote.pullback(θ->f!(action, π, θ), θ)
+    logp, back = Zygote.pullback(π->f!(action, π), π)
     ψ .= back(1)[1]
     return logp
 end

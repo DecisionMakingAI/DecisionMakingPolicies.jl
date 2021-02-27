@@ -1,25 +1,49 @@
-struct StatelessSoftmax <: AbstractStatelessPolicy end
-struct LinearSoftmax <: AbstractPolicy end
+
+struct StatelessSoftmax{T} <: AbstractStatelessPolicy where {T}
+    θ::T
+
+    function StatelessSoftmax(::Type{T}, num_actions::Int) where {T}
+        θ = zeros(T, num_actions)
+        return new{typeof(θ)}(θ)
+    end
+
+    function StatelessSoftmax(num_actions::Int) where {T}
+        return StatelessSoftmax(Float64, num_actions)
+    end
+end
+
+struct LinearSoftmax{T} <: AbstractPolicy where {T}
+    θ::T
+
+    function LinearSoftmax(::Type{T}, num_features::Int, num_actions::Int) where {T}
+        θ = zeros(T, (num_features, num_actions))
+        return new{typeof(θ)}(θ)
+    end
+
+    function LinearSoftmax(num_features::Int, num_actions::Int)
+        return LinearSoftmax(Float64, num_features, num_actions)
+    end
+end
 
 struct SoftmaxBuffer{TA, TP, TS} <: Any
     action::TA
     p::TP
     ψ::TS
 
-    function SoftmaxBuffer(π::StatelessSoftmax, θ)
-        T = eltype(θ[1])
-        n = length(θ[1])
+    function SoftmaxBuffer(π::StatelessSoftmax)
+        T = eltype(π.θ)
+        n = length(π.θ)
         p = zeros(T, n)
-        ψ = zero.(θ)
+        ψ = (θ=zero(π.θ),)
         action = zeros(Int, 1)
         return new{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
     end
 
-    function SoftmaxBuffer(π::LinearSoftmax, θ)
-        T = eltype(θ[1])
-        n = size(θ[1], 2)
+    function SoftmaxBuffer(π::LinearSoftmax)
+        T = eltype(π.θ)
+        n = size(π.θ, 2)
         p = zeros(T, n)
-        ψ = zero.(θ)
+        ψ = (θ=zero(π.θ),)
         action = zeros(Int, 1)
         return new{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
     end
@@ -80,209 +104,200 @@ function sample_discrete(p)
     return i
 end
 
-function initparams(π::StatelessSoftmax, ::Type{T}, action_dim::Int) where {T}
-    N = action_dim
-    θ = zeros(T, N)
-    return (θ,)
-end
-
-function initparams(π::StatelessSoftmax, action_dim::Int)
-    return initparams(π, Float64, action_dim)
-end
-
-function (π::StatelessSoftmax)(θ)
-    p = softmax(θ[1])
+function (π::StatelessSoftmax)()
+    p = softmax(π.θ)
     return Categorical(p)
 end
 
-function (π::StatelessSoftmax)(buff::SoftmaxBuffer, θ)
-    softmax!(buff.p, θ[1])
+function (π::StatelessSoftmax)(buff::SoftmaxBuffer)
+    softmax!(buff.p, π.θ)
     return Categorical(buff.p)
 end
 
-function (π::StatelessSoftmax)(θ, s)
-    return π(θ)
+function (π::StatelessSoftmax)(s)
+    return π()
 end
 
-function (π::StatelessSoftmax)(buff::SoftmaxBuffer, θ, s)
-    return π(buff, θ)
+function (π::StatelessSoftmax)(buff::SoftmaxBuffer, s)
+    return π(buff)
 end
 
-function logpdf(π::StatelessSoftmax, θ, a)
-    p = similar(θ[1])
-    softmax!(p, θ[1])
+function logpdf(π::StatelessSoftmax, a)
+    p = similar(π.θ)
+    softmax!(p, π.θ)
     return log(p[a])
 end
 
-function rrule(::typeof(logpdf), π::StatelessSoftmax, θ, a)
-    p = similar(θ[1])
-    softmax!(p, θ[1])
+function rrule(::typeof(logpdf), π::StatelessSoftmax, a)
+    p = similar(π.θ)
+    softmax!(p, π.θ)
     logp = log(p[a])
     T = typeof(logp)
     function logpdf_stateless_softmax_pullback(Ȳ)
         p *= -T(1.0)
         p[a] += T(1.0)
         p *= Ȳ
-        return NO_FIELDS, DoesNotExist, (p,), DoesNotExist
+        dθ = Composite{typeof(π)}(θ=p)
+        return NO_FIELDS, dθ, DoesNotExist
     end
     return logp, logpdf_stateless_softmax_pullback
 end
 
-function logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, θ, a)
-    softmax!(buff.p, θ[1])
+function logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, a)
+    softmax!(buff.p, π.θ)
     return log(buff.p[a])
 end
 
+function logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, s, a)
+    return logpdf!(buff, π, a)
+end
 
-function grad_logpdf!(ψ, π::StatelessSoftmax, θ, a)
-    softmax!(ψ[1], θ[1])
-    logp = log(ψ[1][a])
-    T = eltype(θ[1])
-    @. ψ[1] *= -T(1.0)
-    ψ[1][a] += T(1.0)
+
+function grad_logpdf!(ψ, π::StatelessSoftmax, a)
+    softmax!(ψ.θ, π.θ)
+    logp = log(ψ.θ[a])
+    T = eltype(π.θ)
+    @. ψ.θ *= -T(1.0)
+    ψ.θ[a] += T(1.0)
     return logp
 end
 
-function grad_logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, θ, a)
-    return grad_logpdf!(buff.ψ, π, θ, a)
+function grad_logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, a)
+    return grad_logpdf!(buff.ψ, π, a)
+end
+
+function grad_logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, s, a)
+    return grad_logpdf!(buff.ψ, π, a)
 end
 
 
-function sample_with_trace!(ψ, action, π::StatelessSoftmax, θ)
-    softmax!(ψ[1], θ[1])
-    a = sample_discrete(ψ[1])
+function sample_with_trace!(ψ, action, π::StatelessSoftmax)
+    softmax!(ψ.θ, π.θ)
+    a = sample_discrete(ψ.θ)
     action[1] = a
 
-    logp = log(ψ[1][a])
+    logp = log(ψ.θ[a])
     T = typeof(logp)
-    @. ψ[1] *= -T(1.0)
-    ψ[1][a] += T(1.0)
+    @. ψ.θ *= -T(1.0)
+    ψ.θ[a] += T(1.0)
     return logp
 end
 
-function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax, θ)
-    logp = sample_with_trace!(buff.ψ, buff.action, π, θ)
+function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax)
+    logp = sample_with_trace!(buff.ψ, buff.action, π)
     return logp
 end
 
-function sample_with_trace!(ψ, action, π::StatelessSoftmax, θ, s)
-    logp = sample_with_trace!(ψ, action, π, θ)
+function sample_with_trace!(ψ, action, π::StatelessSoftmax, s)
+    logp = sample_with_trace!(ψ, action, π)
     return logp
 end
 
-function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax, θ, s)
-    logp = sample_with_trace!(buff.ψ, buff.action, π, θ)
+function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax, s)
+    logp = sample_with_trace!(buff.ψ, buff.action, π)
     return logp
 end
 
 
-function (π::LinearSoftmax)(θ, s)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function (π::LinearSoftmax)(s)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     return Categorical(p)
 end
 
-function rrule(::LinearSoftmax, θ, s)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function rrule(π::LinearSoftmax, s)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     d = Categorical(p)
     function linear_softmax_dist_pullback(ȳ)
         b = dot(ȳ.p, p)
         dp = @. (ȳ.p - b) * p
-        ψ = zero.(θ)
-        G = ψ[1]'
+        ψ = zero(π.θ)
+        G = ψ'
         for i in 1:length(dp)
             @. G[i, :] = s * dp[i]
         end
         ds = zero(s)
-        mul!(ds, θ[1], dp)
-        return NO_FIELDS, ψ, ds
+        mul!(ds, π.θ, dp)
+        dθ = Composite{typeof(π)}(θ=ψ)
+        return dθ, ds
     end
     return d, linear_softmax_dist_pullback
 end
 
 
-function (π::LinearSoftmax)(buff::SoftmaxBuffer, θ, s)
-    mul!(buff.p, θ[1]', s)
+function (π::LinearSoftmax)(buff::SoftmaxBuffer, s)
+    mul!(buff.p, π.θ', s)
     softmax!(buff.p)
     return Categorical(buff.p)
 end
 
-function initparams(π::LinearSoftmax, ::Type{T}, feature_dim::Int, action_dim::Int) where {T}
-    M = feature_dim
-    N = action_dim
-    θ = zeros(T, (M,N))
-    return (θ,)
-end
-
-function initparams(π::LinearSoftmax, feature_dim::Int, action_dim::Int)
-    return initparams(π, Float64, feature_dim, action_dim)
-end
-
-function logpdf(π::LinearSoftmax, θ, s, a)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function logpdf(π::LinearSoftmax, s, a)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     return log(p[a])
 end
 
-function rrule(::typeof(logpdf), π::LinearSoftmax, θ, s, a)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function rrule(::typeof(logpdf), π::LinearSoftmax, s, a)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     logp = log(p[a])
+
     function logpdf_linear_softmax_pullback(ȳ)
         p *= -T(1.0)
         p[a] += T(1.0)
         p *= ȳ
-        ψ = zero.(θ)
-        G = ψ[1]'
+        ψ = zero(π.θ)
+        G = ψ'
         for i in 1:length(p)
             @. G[i, :] = s * p[i]
         end
         ds = zero(s)
-        mul!(ds, θ[1], p)
-        return NO_FIELDS, DoesNotExist, ψ, ds, DoesNotExist
+        mul!(ds, π.θ, p)
+        dθ = Composite{typeof(π)}(θ=ψ)
+        return NO_FIELDS, dθ, ds, DoesNotExist
     end
     return logp, logpdf_linear_softmax_pullback
 end
 
-function logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, θ, s, a)
-    mul!(buff.p, θ[1]', s)
+function logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
+    mul!(buff.p, π.θ', s)
     softmax!(buff.p)
     return log(buff.p[a])
 end
 
-function grad_logpdf!(ψ, π::LinearSoftmax, θ, s, a)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function grad_logpdf!(ψ, π::LinearSoftmax, s, a)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     logpa = log(p[a])
     T = typeof(logpa)
     @. p *= -T(1.0)
     p[a] += T(1.0)
-    G = ψ[1]'
+    G = ψ.θ'
     for i in 1:length(p)
         @. G[i, :] = s * p[i]
     end
     return logpa
 end
 
-function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, θ, s, a)
-    mul!(buff.p, θ[1]', s)
+function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
+    mul!(buff.p, π.θ', s)
     softmax!(buff.p)
     logpa = log(buff.p[a])
     T = typeof(logpa)
     @. buff.p *= -T(1.0)
     buff.p[a] += T(1.0)
-    G = buff.ψ[1]'
+    G = buff.ψ.θ'
     for i in 1:length(buff.p)
         @. G[i, :] = s * buff.p[i]
     end
@@ -290,10 +305,10 @@ function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, θ, s, a)
 end
 
 
-function sample_with_trace!(ψ, action, π::LinearSoftmax, θ, s)
-    T = eltype(θ[1])
-    p = zeros(T, size(θ[1],2))
-    mul!(p, θ[1]', s)
+function sample_with_trace!(ψ, action, π::LinearSoftmax, s)
+    T = eltype(π.θ)
+    p = zeros(T, size(π.θ,2))
+    mul!(p, π.θ', s)
     softmax!(p)
     action[1] = sample_discrete(p)
     logp = log(p[action[1]])
@@ -301,15 +316,15 @@ function sample_with_trace!(ψ, action, π::LinearSoftmax, θ, s)
     @. p *= -T(1.0)
 
     p[action[1]] += T(1.0)
-    G = ψ[1]'
+    G = ψ.θ'
     for i in 1:length(p)
         @. G[i, :] = s * p[i]
     end
     return logp
 end
 
-function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, θ, s)
-    mul!(buff.p, θ[1]', s)
+function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s)
+    mul!(buff.p, π.θ', s)
     softmax!(buff.p)
     a = sample_discrete(buff.p)
     buff.action[1] = a
@@ -318,7 +333,7 @@ function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, θ, s)
     @. buff.p *= -T(1.0)
 
     buff.p[a] += T(1.0)
-    G = buff.ψ[1]'
+    G = buff.ψ.θ'
     for i in 1:length(buff.p)
         @. G[i, :] = s * buff.p[i]
     end
