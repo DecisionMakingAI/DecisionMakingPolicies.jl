@@ -2,15 +2,19 @@ module DecisionMakingPolicies
 
 using DistributionsAD
 using LinearAlgebra
-import NNlib: softmax, softmax!
 import Distributions: logpdf, Categorical, Normal, MvNormal
+using ChainRulesCore
+import ChainRulesCore: rrule
 import Zygote
+
+
 
 abstract type AbstractPolicy end
 abstract type AbstractStatelessPolicy <: AbstractPolicy end
 
 export AbstractPolicy, AbstractStatelessPolicy
-
+export StatelessSoftmax, LinearSoftmax, SoftmaxBuffer
+export StatelessNormal, LinearNormal, NormalBuffer
 
 struct ParameterizedPolicy{T} <: AbstractPolicy where {T}
     f::T
@@ -46,7 +50,7 @@ function sample_with_trace end
 function compatiable_features end
 function init_params end
 
-export logpdf, grad_logpdf!, sample_with_trace!, initparams
+export logpdf, logpdf!, grad_logpdf!, sample_with_trace!, initparams
 
 
 function logpdf(π::AbstractPolicy, θ, s, a)
