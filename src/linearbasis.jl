@@ -9,6 +9,10 @@ struct LinearWithBasisBuffer{TP,TB} <: Any where {TP,TB}
     basis_buffer::TB
 end
 
+function params(π::LinearPolicyWithBasis)
+    return params(π.π)
+end
+
 function (π::LinearPolicyWithBasis)(s)
     feats = π.ϕ(s)
     return π.π(feats)    
@@ -31,24 +35,20 @@ end
 
 function grad_logpdf!(ψ, π::LinearPolicyWithBasis, s, a)
     feats = π.ϕ(s)
-    logp = grad_logpdf!(ψ, π.π, feats, a)
-    return logp
+    return grad_logpdf!(ψ, π.π, feats, a)
 end
 
 function grad_logpdf!(buff::LinearWithBasisBuffer, π::LinearPolicyWithBasis, s, a)
     feats = π.ϕ(buff.basis_buffer, s)
-    logp = grad_logpdf!(buff.policy_buffer, π.π, feats, a)
-    return logp
+    return grad_logpdf!(buff.policy_buffer, π.π, feats, a)
 end
 
 function sample_with_trace!(ψ, action, π::LinearPolicyWithBasis, s)
     feats = π.ϕ(s)
-    logp = sample_with_trace!(ψ, action, π.π, feats)
-    return logp
+    return sample_with_trace!(ψ, action, π.π, feats)
 end
 
 function sample_with_trace!(buff::LinearWithBasisBuffer, π::LinearPolicyWithBasis, s)
     feats = π.ϕ(buff.basis_buffer, s)
-    logp = sample_with_trace!(buff.policy_buffer, π.π, feats)
-    return logp
+    return sample_with_trace!(buff.policy_buffer, π.π, feats)
 end

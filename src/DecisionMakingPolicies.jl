@@ -5,17 +5,17 @@ using LinearAlgebra
 import Distributions: logpdf, Categorical, Normal, MvNormal
 using ChainRulesCore
 import ChainRulesCore: rrule
-import Zygote
+import Zygote 
+import Flux
 
-
-
-export logpdf, logpdf!, grad_logpdf!, sample_with_trace!, initparams
+export logpdf, logpdf!, grad_logpdf!, sample_with_trace!, params
 
 export ParameterizedPolicy, ParameterizedStatelessPolicy
 export AbstractPolicy, AbstractStatelessPolicy
 export StatelessSoftmax, LinearSoftmax, SoftmaxBuffer
 export StatelessNormal, LinearNormal, NormalBuffer
 export LinearPolicyWithBasis, LinearWithBasisBuffer
+export FluxPolicy, FluxBuffer
 
 abstract type AbstractPolicy end
 abstract type AbstractStatelessPolicy <: AbstractPolicy end
@@ -113,5 +113,6 @@ end
 include("softmax.jl")
 include("normal.jl")
 include("linearbasis.jl")
+include("flux.jl")
 
 end

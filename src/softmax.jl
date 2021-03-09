@@ -12,6 +12,11 @@ struct StatelessSoftmax{T} <: AbstractStatelessPolicy where {T}
     end
 end
 
+function params(π::StatelessSoftmax)
+    return (π.θ,)
+end
+
+
 struct LinearSoftmax{T} <: AbstractPolicy where {T}
     θ::T
 
@@ -25,6 +30,10 @@ struct LinearSoftmax{T} <: AbstractPolicy where {T}
     end
 end
 
+function params(π::LinearSoftmax)
+    return (π.θ,)
+end
+
 struct SoftmaxBuffer{TA, TP, TS} <: Any
     action::TA
     p::TP
@@ -34,7 +43,7 @@ struct SoftmaxBuffer{TA, TP, TS} <: Any
         T = eltype(π.θ)
         n = length(π.θ)
         p = zeros(T, n)
-        ψ = (θ=zero(π.θ),)
+        ψ = (zero(π.θ),)
         action = zeros(Int, 1)
         return new{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
     end
@@ -43,7 +52,7 @@ struct SoftmaxBuffer{TA, TP, TS} <: Any
         T = eltype(π.θ)
         n = size(π.θ, 2)
         p = zeros(T, n)
-        ψ = (θ=zero(π.θ),)
+        ψ = (zero(π.θ),)
         action = zeros(Int, 1)
         return new{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
     end
@@ -154,12 +163,12 @@ end
 
 
 function grad_logpdf!(ψ, π::StatelessSoftmax, a)
-    softmax!(ψ.θ, π.θ)
-    logp = log(ψ.θ[a])
+    softmax!(ψ[1], π.θ)
+    logp = log(ψ[1][a])
     T = eltype(π.θ)
-    @. ψ.θ *= -T(1.0)
-    ψ.θ[a] += T(1.0)
-    return logp
+    @. ψ[1] *= -T(1.0)
+    ψ[1][a] += T(1.0)
+    return logp, ψ
 end
 
 function grad_logpdf!(buff::SoftmaxBuffer, π::StatelessSoftmax, a)
@@ -172,30 +181,27 @@ end
 
 
 function sample_with_trace!(ψ, action, π::StatelessSoftmax)
-    softmax!(ψ.θ, π.θ)
-    a = sample_discrete(ψ.θ)
+    softmax!(ψ[1], π.θ)
+    a = sample_discrete(ψ[1])
     action[1] = a
 
-    logp = log(ψ.θ[a])
+    logp = log(ψ[1][a])
     T = typeof(logp)
-    @. ψ.θ *= -T(1.0)
-    ψ.θ[a] += T(1.0)
-    return logp
+    @. ψ[1] *= -T(1.0)
+    ψ[1][a] += T(1.0)
+    return a, logp, ψ
 end
 
 function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax)
-    logp = sample_with_trace!(buff.ψ, buff.action, π)
-    return logp
+    return sample_with_trace!(buff.ψ, buff.action, π)
 end
 
 function sample_with_trace!(ψ, action, π::StatelessSoftmax, s)
-    logp = sample_with_trace!(ψ, action, π)
-    return logp
+    return sample_with_trace!(ψ, action, π)
 end
 
 function sample_with_trace!(buff::SoftmaxBuffer, π::StatelessSoftmax, s)
-    logp = sample_with_trace!(buff.ψ, buff.action, π)
-    return logp
+    return sample_with_trace!(buff.ψ, buff.action, π)
 end
 
 
@@ -283,11 +289,11 @@ function grad_logpdf!(ψ, π::LinearSoftmax, s, a)
     T = typeof(logpa)
     @. p *= -T(1.0)
     p[a] += T(1.0)
-    G = ψ.θ'
+    G = ψ[1]'
     for i in 1:length(p)
         @. G[i, :] = s * p[i]
     end
-    return logpa
+    return logpa, ψ
 end
 
 function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
@@ -297,11 +303,11 @@ function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
     T = typeof(logpa)
     @. buff.p *= -T(1.0)
     buff.p[a] += T(1.0)
-    G = buff.ψ.θ'
+    G = buff.ψ[1]'
     for i in 1:length(buff.p)
         @. G[i, :] = s * buff.p[i]
     end
-    return logpa
+    return logpa, buff.ψ
 end
 
 
@@ -316,11 +322,11 @@ function sample_with_trace!(ψ, action, π::LinearSoftmax, s)
     @. p *= -T(1.0)
 
     p[action[1]] += T(1.0)
-    G = ψ.θ'
+    G = ψ[1]'
     for i in 1:length(p)
         @. G[i, :] = s * p[i]
     end
-    return logp
+    return action[1], logp, buff.ψ
 end
 
 function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s)
@@ -333,9 +339,9 @@ function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s)
     @. buff.p *= -T(1.0)
 
     buff.p[a] += T(1.0)
-    G = buff.ψ.θ'
+    G = buff.ψ[1]'
     for i in 1:length(buff.p)
         @. G[i, :] = s * buff.p[i]
     end
-    return logp
+    return a, logp, buff.ψ
 end

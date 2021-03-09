@@ -1,7 +1,7 @@
 # DecisionMakingPolicies
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://DecisionMakingAI.github.io/Policies.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://DecisionMakingAI.github.io/Policies.jl/dev)
+<!--[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://DecisionMakingAI.github.io/DecisionMakingPolicies.jl/stable)-->
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://DecisionMakingAI.github.io/DecisionMakingPolicies.jl/dev)
 [![Build Status](https://github.com/DecisionMakingAI/Policies.jl/workflows/CI/badge.svg)](https://github.com/DecisionMakingAI/Policies.jl/actions)
 [![Coverage](https://codecov.io/gh/DecisionMakingAI/Policies.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/DecisionMakingAI/Policies.jl)
 
@@ -10,7 +10,6 @@ The repository contains code useful for representing policies used in decision m
 
 ```julia
 using Distributions
-import Flux: softmax
 
 
 π = ParameterizedStatelessPolicy(θ->Categorical(softmax(θ)))

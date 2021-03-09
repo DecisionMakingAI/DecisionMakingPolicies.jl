@@ -15,6 +15,10 @@ struct StatelessNormal{T} <: AbstractStatelessPolicy where {T}
 
 end
 
+function params(π::StatelessNormal)
+    return (π.μ, π.σ)
+end
+
 struct LinearNormal{T,TS} <: AbstractPolicy  where {T,TS}
     W::T
     σ::TS
@@ -30,6 +34,10 @@ struct LinearNormal{T,TS} <: AbstractPolicy  where {T,TS}
     end
 end
 
+function params(π::LinearNormal)
+    return (π.W, π.σ)
+end
+
 struct NormalBuffer{T, TS} <: Any
     action::T
     μ::T
@@ -39,8 +47,8 @@ struct NormalBuffer{T, TS} <: Any
         T = eltype(π.μ)
         n = length(π.μ)
         μ = zeros(T, n)
-        ψ = (μ=zero(π.μ), σ=zero(π.σ))
-        action = zeros(T, n)
+        ψ = (zero(π.μ), zero(π.σ))
+        action = [zeros(T, n)]
         return new{typeof(action),typeof(ψ)}(action, μ, ψ)
     end
 
@@ -48,8 +56,8 @@ struct NormalBuffer{T, TS} <: Any
         T = eltype(π.W)
         n = size(π.W,2)
         μ = zeros(T, n)
-        ψ = (W=zero(π.W), σ=zero(π.σ))
-        action = zeros(T, n)
+        ψ = (zero(π.W), zero(π.σ))
+        action = [zeros(T, n)]
         return new{typeof(action),typeof(ψ)}(action, μ, ψ)
     end
 end
@@ -113,44 +121,44 @@ end
 
 function grad_logpdf!(ψ, π::StatelessNormal, a)
     μ, σ = π.μ, π.σ
-    ψμ, ψσ = ψ.μ, ψ.σ
+    ψμ, ψσ = ψ[1], ψ[2]
     normal_grad_mu!(ψμ, a, μ, σ)
     normal_grad_sigma!(ψσ, a, μ, σ)
 
     logp = sum(logpdf_normal.(a, μ, σ))
 
-    return logp
+    return logp, buff.ψ
 end
 
 function grad_logpdf!(buff::NormalBuffer, π::StatelessNormal, a)
     μ, σ = π.μ, π.σ
-    ψμ, ψσ = buff.ψ.μ, buff.ψ.σ
+    ψμ, ψσ = buff.ψ[1], buff.ψ[2]
     normal_grad_mu!(ψμ, a, μ, σ)
     normal_grad_sigma!(ψσ, a, μ, σ)
     @. buff.μ = logpdf_normal(a, μ, σ)
     logp = sum(buff.μ)
-    return logp
+    return logp, buff.buff.ψ
 end
 
 function sample_with_trace!(ψ, action, π::StatelessNormal)
     μ, σ = π.μ, π.σ
 
     T = eltype(μ)
-    @. action = μ + σ * randn((T,))
+    @. action[1] = μ + σ * randn((T,))
     logp = grad_logpdf!(ψ, π, action)
 
-    return logp
+    return action[1], logp, buff.ψ
 end
 
 function sample_with_trace!(buff::NormalBuffer, π::StatelessNormal)
     μ, σ = π.μ, π.σ
     
     T = eltype(μ)
-    @. buff.action = μ + σ * randn((T,))
+    @. buff.action[1] = μ + σ * randn((T,))
     ψ = buff.ψ
-    logp = grad_logpdf!(ψ, π, buff.action)
+    logp = grad_logpdf!(ψ, π, buff.action[1])
 
-    return logp
+    return buff.action[1], logp, buff.ψ
 end
 
 function (π::LinearNormal)(s)
@@ -198,7 +206,7 @@ function grad_logpdf!(ψ, π::LinearNormal, s, a)
     W, σ = π.W, π.σ
     μ = W's
 
-    ψw, ψσ = ψ.W', ψ.σ
+    ψw, ψσ = ψ[1]', ψ[2]
 
     linear_normal_gradmu!(ψw, a, μ, σ, s)
     normal_grad_sigma!(ψσ, a, μ, σ)
@@ -212,7 +220,7 @@ function grad_logpdf!(buff::NormalBuffer, π::LinearNormal, s, a)
     W, σ = π.W, π.σ
     mul!(buff.μ,W', s)
     ψ = buff.ψ
-    ψw, ψσ = ψ.W', ψ.σ
+    ψw, ψσ = ψ[1]', ψ[2]
 
     linear_normal_gradmu!(ψw, a, buff.μ, σ, s)
     normal_grad_sigma!(ψσ, a, buff.μ, σ)
@@ -231,27 +239,27 @@ function sample_with_trace!(ψ, action, π::LinearNormal, s)
     μ = W's
 
     T = eltype(σ)
-    @. action = μ + σ * randn((T,))
+    @. action[1] = μ + σ * randn((T,))
 
-    ψw, ψσ = ψ.W', ψ.σ
+    ψw, ψσ = ψ[1]', ψ[2]
 
     linear_normal_gradmu!(ψw, action, μ, σ, s)
     normal_grad_sigma!(ψσ, action, μ, σ)
 
     logp = sum(logpdf_normal.(action, μ, σ))
 
-    return logp
+    return action[1], logp, buff.ψ
 end
 
 function sample_with_trace!(buff::NormalBuffer, π::LinearNormal, s)
-    μ, action, ψ = buff.μ, buff.action, buff.ψ
+    μ, action, ψ = buff.μ, buff.action[1], buff.ψ
     W, σ = π.W, π.σ
     mul!(μ, W', s)
 
     T = eltype(σ)
     @. action = μ + σ * randn((T,))
 
-    ψw, ψσ = ψ.W', ψ.σ
+    ψw, ψσ = ψ[1]', ψ[2]
 
     linear_normal_gradmu!(ψw, action, μ, σ, s)
     normal_grad_sigma!(ψσ, action, μ, σ)
@@ -261,7 +269,7 @@ function sample_with_trace!(buff::NormalBuffer, π::LinearNormal, s)
         logp += logpdf_normal(action[i], μ[i], σ[i])
     end
 
-    return logp
+    return action, logp, buff.buff.ψ
 end
 
 
