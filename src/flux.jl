@@ -40,9 +40,10 @@ end
 # end
 
 function grad_logpdf!(buff::FluxBuffer, π::FluxPolicy, s, a)
-    ps = params(π)
-    logp, back = Zygote.pullback(ps->logpdf(π(s), a), ps)
-    g = back(1)[1].grads
+    ps = Flux.params(π.model)
+    logp = logpdf(π, s, a)
+    logp, back = Zygote.pullback(()->logpdf(π,s,a), ps)
+    g = back(1).grads
     for (p, ψ) in zip(ps, buff.ψ)
         @. ψ = g[p]
     end

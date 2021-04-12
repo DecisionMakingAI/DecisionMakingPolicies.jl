@@ -38,8 +38,8 @@ function params(π::LinearNormal)
     return (π.W, π.σ)
 end
 
-struct NormalBuffer{T, TS} <: Any
-    action::T
+struct NormalBuffer{TA, T, TS} <: Any
+    action::TA
     μ::T
     ψ::TS
 
@@ -49,7 +49,7 @@ struct NormalBuffer{T, TS} <: Any
         μ = zeros(T, n)
         ψ = (zero(π.μ), zero(π.σ))
         action = [zeros(T, n)]
-        return new{typeof(action),typeof(ψ)}(action, μ, ψ)
+        return new{typeof(action),typeof(μ),typeof(ψ)}(action, μ, ψ)
     end
 
     function NormalBuffer(π::LinearNormal)
@@ -58,7 +58,7 @@ struct NormalBuffer{T, TS} <: Any
         μ = zeros(T, n)
         ψ = (zero(π.W), zero(π.σ))
         action = [zeros(T, n)]
-        return new{typeof(action),typeof(ψ)}(action, μ, ψ)
+        return new{typeof(action),typeof(μ), typeof(ψ)}(action, μ, ψ)
     end
 end
 
@@ -269,7 +269,7 @@ function sample_with_trace!(buff::NormalBuffer, π::LinearNormal, s)
         logp += logpdf_normal(action[i], μ[i], σ[i])
     end
 
-    return action, logp, buff.buff.ψ
+    return action, logp, buff.ψ
 end
 
 

@@ -43,9 +43,21 @@ function grad_logpdf!(buff::LinearWithBasisBuffer, π::LinearPolicyWithBasis, s,
     return grad_logpdf!(buff.policy_buffer, π.π, feats, a)
 end
 
+function grad_logpdf(π::LinearPolicyWithBasis, s, a)
+    feats = π.ϕ(s)
+    logp, ψ = grad_logpdf(π.π, feats, a)
+    return logp, ψ
+end
+
+
 function sample_with_trace!(ψ, action, π::LinearPolicyWithBasis, s)
     feats = π.ϕ(s)
     return sample_with_trace!(ψ, action, π.π, feats)
+end
+
+function sample_with_trace(π::LinearPolicyWithBasis, s)
+    feats = π.ϕ(s)
+    return sample_with_trace(π.π, feats)
 end
 
 function sample_with_trace!(buff::LinearWithBasisBuffer, π::LinearPolicyWithBasis, s)

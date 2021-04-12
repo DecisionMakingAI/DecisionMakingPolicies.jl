@@ -8,14 +8,14 @@ import ChainRulesCore: rrule
 import Zygote 
 import Flux
 
-export logpdf, logpdf!, grad_logpdf!, sample_with_trace!, params
+export logpdf, logpdf!, grad_logpdf, grad_logpdf!, sample_with_trace, sample_with_trace!, params
 
 export ParameterizedPolicy, ParameterizedStatelessPolicy
 export AbstractPolicy, AbstractStatelessPolicy
 export StatelessSoftmax, LinearSoftmax, SoftmaxBuffer
 export StatelessNormal, LinearNormal, NormalBuffer
 export LinearPolicyWithBasis, LinearWithBasisBuffer
-export FluxPolicy, FluxBuffer
+export FluxPolicy, FluxBuffer, BufferedPolicy
 
 abstract type AbstractPolicy end
 abstract type AbstractStatelessPolicy <: AbstractPolicy end
@@ -29,6 +29,11 @@ struct ParameterizedStatelessPolicy{T} <: AbstractStatelessPolicy where {T}
     f::T
 end
 
+struct BufferedPolicy{TP,TB} <: AbstractPolicy where {TP,TB}
+    π::TP
+    buff::TB
+end
+
 function (π::ParameterizedPolicy)(s)
     return π.f(s)
 end
@@ -37,10 +42,17 @@ function (π::ParameterizedStatelessPolicy)()
     return π.f()
 end
 
+function (π::BufferedPolicy)(s)
+    return π.π(π.buff, s)
+end
 
 function logpdf(π::AbstractPolicy, s, a)
     d = π(s)
     return logpdf(d, a)
+end
+
+function logpdf(π::BufferedPolicy, s, a)
+    return logpdf!(π.buff, π.π, s, a)
 end
 
 function logpdf(π::AbstractStatelessPolicy, a)
@@ -52,6 +64,17 @@ function grad_logpdf!(ψ, π::AbstractPolicy, s, a)
     logp, back = Zygote.pullback((π)->logpdf(π, s, a), π)
     ψ .= back(1)[1]
     return logp
+end
+
+function grad_logpdf(π::AbstractPolicy, s, a)
+    logp, back = Zygote.pullback((π)->logpdf(π, s, a), π)
+    ψ = back(1)[1]
+    return logp, ψ
+end
+
+function grad_logpdf(π::BufferedPolicy, s, a)
+    logp, ψ = grad_logpdf!(π.buff, π.π, s, a)
+    return logp, ψ
 end
 
 function grad_logpdf!(ψ, π::AbstractStatelessPolicy, a)
@@ -85,6 +108,11 @@ function sample_with_trace!(ψ, action, π::AbstractPolicy, s)
     return logp
 end
 
+function sample_with_trace(π::BufferedPolicy, s)
+    action, logp, ψ =  sample_with_trace!(π.buff, π.π, s)
+    return action, logp, ψ
+end
+
 function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy)
     function f!(res, π)
         d = π()
@@ -108,6 +136,9 @@ function sample_with_trace!(ψ, action, π::AbstractStatelessPolicy)
     return logp
 end
 
+function params(π::BufferedPolicy)
+    return params(π.π)
+end
 
 
 include("softmax.jl")
