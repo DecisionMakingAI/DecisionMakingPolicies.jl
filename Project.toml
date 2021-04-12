@@ -13,10 +13,10 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-Distributions = "0.23"
-DistributionsAD = "0.6"
-Zygote = "0.5","0.6"
-julia = "1.4"
+Distributions = ">=0.23"
+DistributionsAD = ">=0.6"
+Zygote = ">=0.5"
+julia = ">=1.4"
 
 [extras]
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
