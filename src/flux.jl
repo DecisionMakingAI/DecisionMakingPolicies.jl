@@ -23,6 +23,12 @@ function (π::FluxPolicy)(s)
     return d
 end
 
+function (π::FluxPolicy)(buff::FluxBuffer, s)
+    out = π.model(s)
+    d = π.distribution(out)
+    return d
+end
+
 function params(π::FluxPolicy)
     return Flux.params(π.model)
 end
