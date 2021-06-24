@@ -73,7 +73,8 @@ function normal_grad_mu!(G, z, μ, σ)
 end
 
 function normal_grad_sigma!(G, z, μ, σ)
-    @. G = (-1 + ((z - μ) / σ)^2) / σ
+    T = eltype(z)
+    @. G = (T(-1) + ((z - μ) / σ)^2) / σ
 end
 
 function linear_normal_gradmu!(G,z,μ,σ,x)
@@ -190,6 +191,13 @@ function logpdf(π::LinearNormal, s, a)
     return logp
 end
 
+function logpdf(π::LinearNormal, s::Matrix, a)
+    W, σ = π.W, π.σ
+    μ = W's
+    logp = sum(logpdf_normal.(a, μ, σ), dims=1)
+    return logp
+end
+
 function logpdf!(buff::NormalBuffer, π::LinearNormal, s, a)
     W, σ = π.W, π.σ
     mul!(buff.μ, W', s)
@@ -213,7 +221,7 @@ function grad_logpdf!(ψ, π::LinearNormal, s, a)
 
     logp = sum(logpdf_normal.(a, μ, σ))
 
-    return logp
+    return logp, ψ
 end
 
 function grad_logpdf!(buff::NormalBuffer, π::LinearNormal, s, a)
@@ -224,13 +232,14 @@ function grad_logpdf!(buff::NormalBuffer, π::LinearNormal, s, a)
 
     linear_normal_gradmu!(ψw, a, buff.μ, σ, s)
     normal_grad_sigma!(ψσ, a, buff.μ, σ)
+    
     T = eltype(σ)
     logp = T(0.0)
     for i in 1:length(buff.μ)
         logp += logpdf_normal(a[i], buff.μ[i], σ[i])
     end
 
-    return logp
+    return logp, ψ
 end
 
 
