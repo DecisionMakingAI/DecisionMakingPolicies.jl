@@ -191,7 +191,7 @@ function logpdf(π::LinearNormal, s, a)
     return logp
 end
 
-function logpdf(π::LinearNormal, s::Matrix, a)
+function logpdf(π::LinearNormal, s::AbstractMatrix, a)
     W, σ = π.W, π.σ
     μ = W's
     logp = sum(logpdf_normal.(a, μ, σ), dims=1)

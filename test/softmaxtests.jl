@@ -1,7 +1,7 @@
 using DecisionMakingPolicies
 using Test
 
-import Zygote: gradient
+import Zygote: gradient, pullback
 
 @testset "Stateless Softmax Tests" begin
     num_actions = 2
@@ -26,7 +26,7 @@ import Zygote: gradient
     @test eltype(gauto1) == eltype(p.θ)
     @test all(isapprox.(gauto1, gauto2))
 
-    logp3 = grad_logpdf!(g, p, 1)
+    logp3, _ = grad_logpdf!(g, p, 1)
     @test typeof(logp3) == T
     @test logp3 == logp2
     @test all(isapprox.(g.θ, gauto1))
@@ -35,7 +35,7 @@ import Zygote: gradient
 
     A = zeros(Int,1)
     A2 = zeros(Int,2)
-    logp4 = sample_with_trace!(g, A, p)
+    _, logp4, _ = sample_with_trace!(g, A, p)
     @test A[1] > 0
     if A[1] == 1
         @test all(isapprox.(g.θ, g2))
@@ -59,8 +59,8 @@ end
     
     @test eltype(buff.action) == Int
     @test eltype(buff.p) == T
-    @test eltype(buff.ψ.θ) == T
-    @test size(buff.ψ.θ) == size(p.θ)
+    @test eltype(buff.ψ[1]) == T
+    @test size(buff.ψ[1]) == size(p.θ)
     @test size(buff.p) == size(p.θ)
 
     a = rand(p(buff))
@@ -75,20 +75,20 @@ end
     @test isapprox(logp1, logp3)
 
     gauto1 = gradient(p->logpdf(p,1),p)[1].θ
-    logp3 = grad_logpdf!(buff, p, 1)
+    logp3, _ = grad_logpdf!(buff, p, 1)
     @test typeof(logp3) == T
     @test logp3 == logp1
-    @test all(isapprox.(buff.ψ.θ, gauto1))
+    @test all(isapprox.(buff.ψ[1], gauto1))
     g2 = Array{T,1}([0.5, -0.5])
-    @test all(isapprox.(buff.ψ.θ, g2))
+    @test all(isapprox.(buff.ψ[1], g2))
 
     
-    logp4 = sample_with_trace!(buff, p)
+    _, logp4, _ = sample_with_trace!(buff, p)
     @test buff.action[1] > 0
     if buff.action[1] == 1
-        @test all(isapprox.(buff.ψ.θ, g2))
+        @test all(isapprox.(buff.ψ[1], g2))
     else
-        @test all(isapprox.(buff.ψ.θ, -g2))
+        @test all(isapprox.(buff.ψ[1], -g2))
     end
 end
 
@@ -119,16 +119,28 @@ end
     @test eltype(gauto1) == eltype(p.θ)
     @test all(isapprox.(gauto1, gauto2))
 
-    logp3 = grad_logpdf!(g, p, s, 1)
+    logp3, _ = grad_logpdf!(g, p, s, 1)
     @test typeof(logp3) == T
     @test logp3 == logp2
     @test all(isapprox.(g.θ, gauto1))
     g2 = Array{T,2}([0.0 0.0; 0.5 -0.5; 1.0 -1.0])
     @test all(isapprox.(g.θ, g2))
 
+    k = 3
+    sb = reshape(collect(T, 1:num_features*k), (num_features, k))
+    ab = rand(1:num_actions, (1, k))
+    gb = zero(p.θ)
+    logps = []
+    for i in 1:k
+        logp, ψ = grad_logpdf!(g, p, sb[:, i], ab[1, i])
+        push!(logps, logp)
+        @. gb += ψ[1]
+    end
+    zlogps, gbf = pullback(p->(logpdf(p,sb,ab)),p)
+
     A = zeros(Int,1)
     A2 = zeros(Int,2)
-    logp4 = sample_with_trace!(g, A, p, s)
+    _, logp4, _ = sample_with_trace!(g, A, p, s)
     @test A[1] > 0
     if A[1] == 1
         @test all(isapprox.(g.θ, g2))
@@ -153,8 +165,8 @@ end
     buff = SoftmaxBuffer(p)
     @test eltype(buff.action) == Int
     @test eltype(buff.p) == T
-    @test eltype(buff.ψ.θ) == T
-    @test size(buff.ψ.θ) == size(p.θ)
+    @test eltype(buff.ψ[1]) == T
+    @test size(buff.ψ[1]) == size(p.θ)
     @test size(buff.p) == (num_actions,)
 
 
@@ -171,18 +183,18 @@ end
     @test isapprox(logp1, logp3)
     
     gauto1 = gradient(p->logpdf(p(s),1),p)[1].θ
-    logp3 = grad_logpdf!(buff, p, s, 1)
+    logp3, _ = grad_logpdf!(buff, p, s, 1)
     @test typeof(logp3) == T
     @test logp3 == logp2
-    @test all(isapprox.(buff.ψ.θ, gauto1))
+    @test all(isapprox.(buff.ψ[1], gauto1))
     g2 = Array{T,2}([0.0 0.0; 0.5 -0.5; 1.0 -1.0])
-    @test all(isapprox.(buff.ψ.θ, g2))
+    @test all(isapprox.(buff.ψ[1], g2))
 
-    logp4 = sample_with_trace!(buff, p, s)
+    _, logp4, _ = sample_with_trace!(buff, p, s)
     @test buff.action[1] > 0
     if buff.action[1] == 1
-        @test all(isapprox.(buff.ψ.θ, g2))
+        @test all(isapprox.(buff.ψ[1], g2))
     else
-        @test all(isapprox.(buff.ψ.θ, -g2))
+        @test all(isapprox.(buff.ψ[1], -g2))
     end
 end
