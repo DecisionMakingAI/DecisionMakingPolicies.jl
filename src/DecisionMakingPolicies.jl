@@ -4,11 +4,12 @@ using DistributionsAD
 using LinearAlgebra
 import Distributions: logpdf, Categorical, Normal, MvNormal
 using ChainRulesCore
-import ChainRulesCore: rrule
+import ChainRulesCore: rrule, Tangent
 import Zygote 
 import Flux
 
-export logpdf, logpdf!, grad_logpdf, grad_logpdf!, sample_with_trace, sample_with_trace!, params
+export logpdf, logpdf!, grad_logpdf, grad_logpdf!, sample_with_trace, sample_with_trace!
+export params, paramsvec, paramsfromvec!
 
 export ParameterizedPolicy, ParameterizedStatelessPolicy
 export AbstractPolicy, AbstractStatelessPolicy

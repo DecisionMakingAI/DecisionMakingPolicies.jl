@@ -19,6 +19,28 @@ function params(π::StatelessNormal)
     return (π.μ, π.σ)
 end
 
+function paramsvec(π::StatelessNormal)
+    return vcat(copy(vec(π.μ)), copy(vec(π.σ)))
+end
+
+function paramsfromvec!(π::StatelessNormal, θ)
+    nμ = length(π.μ)
+    @. π.μ = @view θ[1:nμ]
+    @. π.σ = @view θ[nμ+1:end]
+    return π
+end
+
+function rrule(::typeof(paramsfromvec!), π::StatelessNormal, θ)
+    nμ = length(π.μ)
+    @. π.μ = @view θ[1:nμ]
+    @. π.σ = @view θ[nμ+1:end]
+    function paramsfromvec_statelessnormal!(ȳ)
+        dθ = vcat(vec(ȳ.μ), vec(ȳ.σ))
+        return NoTangent(), ȳ, dθ
+    end
+    return π, paramsfromvec_statelessnormal!
+end
+
 struct LinearNormal{T,TS} <: AbstractPolicy  where {T,TS}
     W::T
     σ::TS
@@ -36,6 +58,28 @@ end
 
 function params(π::LinearNormal)
     return (π.W, π.σ)
+end
+
+function paramsvec(π::LinearNormal)
+    return vcat(copy(vec(π.W)), copy(vec(π.σ)))
+end
+
+function paramsfromvec!(π::LinearNormal, θ)
+    nW = length(π.W)
+    @. π.μ = @view θ[1:nW]
+    @. π.σ = @view θ[nW+1:end]
+    return π
+end
+
+function rrule(::typeof(paramsfromvec!), π::LinearNormal, θ)
+    nW = length(π.μ)
+    @. π.μ = @view θ[1:nW]
+    @. π.σ = @view θ[nW+1:end]
+    function paramsfromvec_normal!(ȳ)
+        dθ = vcat(vec(ȳ.W), vec(ȳ.σ))
+        return NoTangent(), ȳ, dθ
+    end
+    return π, paramsfromvec_normal!
 end
 
 struct NormalBuffer{TA, T, TS} <: Any
