@@ -56,14 +56,14 @@ function paramsvec(π::LinearSoftmax)
 end
 
 function paramsfromvec!(π::LinearSoftmax, θ)
-    @. π.θ = θ
+    π.θ .= reshape(θ, size(π.θ))
     return π
 end
 
 function rrule(::typeof(paramsfromvec!), π::LinearSoftmax, θ)
-    @. π.θ = θ
+    π.θ .= reshape(θ, size(π.θ))
     function paramsfromvec_softmax!(ȳ)
-        dθ = ȳ.θ
+        dθ = vec(ȳ.θ)
         return NoTangent(), ȳ, dθ
     end
     return π, paramsfromvec_softmax!

@@ -66,14 +66,16 @@ end
 
 function paramsfromvec!(π::LinearNormal, θ)
     nW = length(π.W)
-    @. π.μ = @view θ[1:nW]
+    θW = @view θ[1:nW]
+    π.W .= reshape(θW, size(π.W))
     @. π.σ = @view θ[nW+1:end]
     return π
 end
 
 function rrule(::typeof(paramsfromvec!), π::LinearNormal, θ)
     nW = length(π.μ)
-    @. π.μ = @view θ[1:nW]
+    θW = @view θ[1:nW]
+    π.W .= reshape(θW, size(π.W))
     @. π.σ = @view θ[nW+1:end]
     function paramsfromvec_normal!(ȳ)
         dθ = vcat(vec(ȳ.W), vec(ȳ.σ))

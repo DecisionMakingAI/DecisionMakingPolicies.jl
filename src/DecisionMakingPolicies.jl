@@ -17,6 +17,7 @@ export StatelessSoftmax, LinearSoftmax, SoftmaxBuffer
 export StatelessNormal, LinearNormal, NormalBuffer
 export LinearPolicyWithBasis
 export LinearPolicyWithFluxBasis
+export BufferedPolicy 
 
 abstract type AbstractPolicy end
 abstract type AbstractStatelessPolicy <: AbstractPolicy end

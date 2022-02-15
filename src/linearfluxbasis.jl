@@ -27,7 +27,8 @@ function paramsfromvec!(π::LinearPolicyWithFluxBasis, θ)
     m = π.ϕ
     fmap(m) do x
         x isa AbstractArray || return x
-        x .= reshape(@view θ[i.+(1:length(x))], size(x))
+        θx = @view θ[i.+(1:length(x))]
+        x .= reshape(θx, size(x))
         i += length(x)
         return x
     end
@@ -41,7 +42,8 @@ function rrule(::typeof(paramsfromvec!), π::LinearPolicyWithFluxBasis, θ)
     m = π.ϕ
     m̄ = fmap(m) do x
         x isa AbstractArray || return x
-        x .= reshape(@view θ[i.+(1:length(x))], size(x))
+        θx = @view θ[i.+(1:length(x))]
+        x .= reshape(θx, size(x))
         i += length(x)
         return x
     end
