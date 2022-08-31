@@ -270,6 +270,50 @@ function rrule(π::LinearSoftmax, s)
     return d, linear_softmax_dist_pullback
 end
 
+function (π::LinearSoftmax)(s::AbstractMatrix)
+    return pdf_linsoftmax(π.θ, s)
+end
+
+# function pdf_linsoftmax(θ, s::AbstractMatrix)
+#     T = eltype(θ)
+#     num_a = size(θ,2)
+#     n = size(s,2)
+#     p = zeros(T, (num_a, n))
+#     mul!(p, θ', s)
+#     for i in 1:n
+#         pi = @view p[:, i]
+#         softmax!(pi)
+#     end
+#     return p
+# end
+
+# function rrule((::pdf_linsoftmax), θ, s::AbstractMatrix)
+#     T = eltype(θ)
+#     num_a = size(θ,2)
+#     n = size(s,2)
+#     p = zeros(T, (num_a, n))
+#     mul!(p, θ', s)
+#     for i in 1:n
+#         pi = @view p[:, i]
+#         softmax!(pi)
+#     end
+#     return p
+#     function linear_softmax_pdf_pullback(ȳ)
+#         b = dot(ȳ, p)
+#         dp = @. (ȳ - b) * p
+#         ψ = zero(θ)
+#         G = ψ'
+#         for i in 1:length(dp)
+#             @. G[i, :] = s * dp[i]
+#         end
+#         ds = zero(s)
+#         mul!(ds, π.θ, dp)
+#         dθ = Tangent{typeof(π)}(θ=ψ)
+#         return dθ, ds
+#     end
+#     return d, linear_softmax_dist_pullback
+# end
+
 
 function (π::LinearSoftmax)(buff::SoftmaxBuffer, s)
     mul!(buff.p, π.θ', s)
@@ -279,6 +323,10 @@ end
 
 function logpdf(π::LinearSoftmax, s, a)
     return logpdf_softmax(π.θ, s, a)
+end
+
+function logpdf(π::LinearSoftmax, s)
+    return logpdf_softmax(π.θ, s)
 end
 
 function logpdf_softmax(θ, s, a)
@@ -359,6 +407,49 @@ function rrule(::typeof(logpdf_softmax), θ, s::AbstractMatrix, a)
     return logps, logpdf_linear_softmax_batch_pullback
 end
 
+function logpdf_softmax(θ, s::AbstractMatrix)
+    T = eltype(θ)
+    num_a = size(θ,2)
+    n = size(s,2)
+    p = zeros(T, (num_a, n))
+    mul!(p, θ', s)
+    logps = zeros(T, (num_a,n))
+    for i in 1:n
+        p_i = @view p[:, i]
+        softmax!(p_i)
+        @. logps[:,i] = log(p_i)
+    end
+    return logps
+end
+
+function rrule(::typeof(logpdf_softmax), θ, s::AbstractMatrix)
+    T = eltype(θ)
+    num_a = size(θ,2)
+    n = size(s,2)
+    p = zeros(T, (num_a, n))
+    mul!(p, θ', s)
+    logps = zeros(T, (num_a,n))
+    for i in 1:n
+        p_i = @view p[:, i]
+        softmax!(p_i)
+        @. logps[:,i] = log(p_i)
+    end
+
+    function logpdf_linear_softmax_batch_pullback(ȳ)
+        ψ = zero(θ)
+        # G = ψ'
+        ds = zero(s)
+        y2 = sum(ȳ, dims=1)
+        @. p = ȳ - p * y2
+        mul!(ψ, s, p')
+        mul!(ds, θ, p)
+        
+        
+        return NoTangent(), ψ, ds, ZeroTangent()
+    end
+    return logps, logpdf_linear_softmax_batch_pullback
+end
+
 function logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
     mul!(buff.p, π.θ', s)
     softmax!(buff.p)
@@ -421,9 +512,9 @@ function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s)
     buff.action[1] = a
     logp = log(buff.p[a])
     T = typeof(logp)
-    @. buff.p *= -T(1.0)
+    @. buff.p *= -one(T)
 
-    buff.p[a] += T(1.0)
+    buff.p[a] += one(T)
     G = buff.ψ[1]'
     for i in 1:length(buff.p)
         @. G[i, :] = s * buff.p[i]

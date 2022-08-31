@@ -123,6 +123,11 @@ function logpdf(π::LinearPolicyWithFluxBasis, s, a)
     return logpdf(π.π, feats, a)
 end
 
+function logpdf(π::LinearPolicyWithFluxBasis, s)
+    feats = π.ϕ(s)
+    return logpdf(π.π, feats)
+end
+
 function grad_logpdf(π::LinearPolicyWithFluxBasis, s, a)
     ps = params(π)
     logp, gp = Zygote.pullback(()->logpdf(π, s, a), ps)
