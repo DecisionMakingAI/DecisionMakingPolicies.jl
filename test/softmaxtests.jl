@@ -1,7 +1,10 @@
 using DecisionMakingPolicies
 using Test
-
+import DecisionMakingPolicies: grad_logpdf!, logpdf!, sample_with_trace!
+import DecisionMakingPolicies: logpdf_softmax
 import Zygote: gradient, pullback
+using ChainRulesTestUtils
+
 
 @testset "Stateless Softmax Tests" begin
     num_actions = 2
@@ -125,6 +128,9 @@ end
     @test all(isapprox.(g.θ, gauto1))
     g2 = Array{T,2}([0.0 0.0; 0.5 -0.5; 1.0 -1.0])
     @test all(isapprox.(g.θ, g2))
+    logp4, gpi =  grad_logpdf(p, s, 1)
+    @test all(isapprox.(gpi[1], g2))
+    @test logp4 == logp2
 
     k = 3
     sb = reshape(collect(T, 1:num_features*k), (num_features, k))
@@ -154,6 +160,15 @@ end
     sample_with_trace!(g, view(A2,2:2), p, s)
     @test A2[1] == a1
     @test A2[2] > 0
+
+    a5, logp5, g5 = sample_with_trace(p, s)
+    if a5 == 1
+        @test all(isapprox.(g5[1], g2))
+    else
+        @test all(isapprox.(g5[1], -g2))
+    end
+
+    
 end
 
 
@@ -197,4 +212,22 @@ end
     else
         @test all(isapprox.(buff.ψ[1], -g2))
     end
+end
+
+@testset "Softmax Rules Tests" begin
+    num_actions = 2
+    num_features = 3
+    T = Float32
+    p = LinearSoftmax(T, num_features, num_actions)
+    x = randn(T, num_features)
+    X = randn(T, (num_features, 10))
+    A = rand(1:10)
+
+    test_rrule(logpdf_softmax, p, x, 1)
+    test_rrule(logpdf_softmax, p, x, 2)
+    test_rrule(logpdf_softmax, p, x)
+    test_rrule(logpdf_softmax, p, X, A)
+    test_rrule(logpdf_softmax, p, X)
+
+    
 end

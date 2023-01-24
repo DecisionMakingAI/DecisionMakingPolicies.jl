@@ -136,7 +136,7 @@ function (π::StatelessNormal)()
     μ, σ = π.μ, π.σ
     N = length(μ)
     if N > 1
-        return MvNormal(μ, σ)
+        return MvNormal(μ, Diagonal(map(abs2,σ)))
     else
         return Normal(μ[1], σ[1])
     end
@@ -146,7 +146,7 @@ function (π::StatelessNormal)(buff::NormalBuffer)
     μ, σ = π.μ, π.σ
     N = length(μ)
     if N > 1
-        return MvNormal(μ, σ)
+        return MvNormal(μ, Diagonal(map(abs2,σ)))
     else
         return Normal(μ[1], σ[1])
     end
@@ -174,7 +174,7 @@ function grad_logpdf!(ψ, π::StatelessNormal, a)
 
     logp = sum(logpdf_normal.(a, μ, σ))
 
-    return logp, buff.ψ
+    return logp, ψ
 end
 
 function grad_logpdf!(buff::NormalBuffer, π::StatelessNormal, a)
@@ -184,17 +184,17 @@ function grad_logpdf!(buff::NormalBuffer, π::StatelessNormal, a)
     normal_grad_sigma!(ψσ, a, μ, σ)
     @. buff.μ = logpdf_normal(a, μ, σ)
     logp = sum(buff.μ)
-    return logp, buff.buff.ψ
+    return logp, buff.ψ
 end
 
 function sample_with_trace!(ψ, action, π::StatelessNormal)
     μ, σ = π.μ, π.σ
 
     T = eltype(μ)
-    @. action[1] = μ + σ * randn((T,))
-    logp = grad_logpdf!(ψ, π, action)
+    @. action = μ + σ * randn((T,))
+    logp, _ = grad_logpdf!(ψ, π, action)
 
-    return action[1], logp, buff.ψ
+    return action[1], logp, ψ
 end
 
 function sample_with_trace!(buff::NormalBuffer, π::StatelessNormal)
@@ -203,7 +203,7 @@ function sample_with_trace!(buff::NormalBuffer, π::StatelessNormal)
     T = eltype(μ)
     @. buff.action[1] = μ + σ * randn((T,))
     ψ = buff.ψ
-    logp = grad_logpdf!(ψ, π, buff.action[1])
+    logp, _ = grad_logpdf!(ψ, π, buff.action[1])
 
     return buff.action[1], logp, buff.ψ
 end
@@ -213,7 +213,7 @@ function (π::LinearNormal)(s)
     μ = W's
     N = length(σ)
     if N > 1
-        return MvNormal(μ, σ)
+        return MvNormal(μ, Diagonal(map(abs2,σ)))
     else
         return Normal(μ[1], σ[1])
     end
@@ -224,7 +224,7 @@ function (π::LinearNormal)(buff::NormalBuffer, s)
     mul!(buff.μ, W', s)
     N = length(σ)
     if N > 1
-        return MvNormal(buff.μ, σ)
+        return MvNormal(buff.μ, Diagonal(map(abs2,σ)))
     else
         return Normal(buff.μ[1], σ[1])
     end
@@ -294,7 +294,7 @@ function sample_with_trace!(ψ, action, π::LinearNormal, s)
     μ = W's
 
     T = eltype(σ)
-    @. action[1] = μ + σ * randn((T,))
+    @. action = μ + σ * randn((T,))
 
     ψw, ψσ = ψ[1]', ψ[2]
 
@@ -303,7 +303,7 @@ function sample_with_trace!(ψ, action, π::LinearNormal, s)
 
     logp = sum(logpdf_normal.(action, μ, σ))
 
-    return action[1], logp, buff.ψ
+    return action, logp, ψ
 end
 
 function sample_with_trace!(buff::NormalBuffer, π::LinearNormal, s)

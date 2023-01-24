@@ -422,6 +422,17 @@ function logpdf_softmax(θ, s::AbstractMatrix)
     return logps
 end
 
+function logpdf_softmax(θ, s::AbstractVector)
+    T = eltype(θ)
+    num_a = size(θ,2)
+    p = zeros(T, num_a)
+    mul!(p, θ', s)
+    logps = zeros(T, num_a)
+    softmax!(p)
+    @. logps = log(p)
+    return logps
+end
+
 function rrule(::typeof(logpdf_softmax), θ, s::AbstractMatrix)
     T = eltype(θ)
     num_a = size(θ,2)
@@ -456,6 +467,12 @@ function logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
     return log(buff.p[a])
 end
 
+function grad_logpdf(π::LinearSoftmax, s, a)
+    G = zero(π.θ)
+    logpa, ψ = grad_logpdf!((G,), π, s, a)
+    return logpa, ψ
+end
+
 function grad_logpdf!(ψ, π::LinearSoftmax, s, a)
     T = eltype(π.θ)
     p = zeros(T, size(π.θ,2))
@@ -486,6 +503,11 @@ function grad_logpdf!(buff::SoftmaxBuffer, π::LinearSoftmax, s, a)
     return logpa, buff.ψ
 end
 
+function sample_with_trace(π::LinearSoftmax, s)
+    G = zero(π.θ)
+    action = zeros(Int, 1)
+    return sample_with_trace!((G,), action, π, s)
+end
 
 function sample_with_trace!(ψ, action, π::LinearSoftmax, s)
     T = eltype(π.θ)
