@@ -57,3 +57,8 @@ function sample_with_trace(π::LinearPolicyWithBasis, s)
     feats = π.ϕ(s)
     return sample_with_trace(π.π, feats)
 end
+
+function sample_with_trace(π::LinearPolicyWithBasis, s)
+    feats = π.ϕ(s)
+    return sample_with_trace(π.π, feats)
+end

@@ -543,3 +543,19 @@ function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s)
     end
     return a, logp, buff.ψ
 end
+
+function sample_with_trace!(buff::SoftmaxBuffer, π::LinearSoftmax, s::Int)
+    buff.p .= @view π.θ[s, :]
+    softmax!(buff.p)
+    a = sample_discrete(buff.p)
+    buff.action[1] = a
+    logp = log(buff.p[a])
+    T = typeof(logp)
+    @. buff.p *= -one(T)
+
+    buff.p[a] += one(T)
+    G = buff.ψ[1]'
+    fill!(G, zero(T))
+    G[:, s] = buff.p
+    return a, logp, buff.ψ
+end
