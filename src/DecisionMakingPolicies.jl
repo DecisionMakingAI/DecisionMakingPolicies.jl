@@ -2,7 +2,7 @@ module DecisionMakingPolicies
 
 using DistributionsAD
 using LinearAlgebra
-import Distributions: logpdf, Categorical, Normal, MvNormal
+import Distributions: logpdf, Categorical, Normal, MvNormal, params
 using ChainRulesCore
 import ChainRulesCore: rrule, Tangent
 import Zygote 

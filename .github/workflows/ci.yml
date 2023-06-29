@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.4'
-          - '1.5'
-        os:
-          - ubuntu-latest
+          - '1.7'
+          - '1.8'
+          - '1.9'
+        os: os: [ubuntu-latest, macOS-latest, windows-latest]
         arch:
           - x64
     steps:
