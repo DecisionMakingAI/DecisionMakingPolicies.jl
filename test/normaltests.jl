@@ -1,7 +1,7 @@
 using DecisionMakingPolicies
 using Test
 
-import Zygote: gradient
+import Zygote: gradient, pullback
 import Distributions: Normal, MvNormal
 import DecisionMakingPolicies: grad_logpdf!, logpdf!, sample_with_trace!
 
@@ -178,6 +178,44 @@ end
     @test all(.!isapprox.(A2[:,2], 0.0))
 end
 
+@testset "Linear Normal Batch Tests" begin
+    num_actions = 1
+    num_features = 3
+    T = Float32
+    
+    for num_actions in [1,2,5]
+        for num_samples in [1, 11]
+            p = LinearNormal(T, num_features, num_actions)
+
+            vec(p.W) .= collect(1:length(p.W)) .* π ./ length(p.W)
+            vec(p.σ) .= 0.1 * collect(1:num_actions)
+            X = rand(T, num_features, num_samples)
+            A = randn(T, num_actions, num_samples) 
+            blogps = zeros(T, (1,num_samples))
+            gradW = zero(p.W)
+            gradσ = zero(p.σ)
+            for i in 1:num_samples
+                logp, g = grad_logpdf(p, X[:, i], A[:, i])
+                blogps[1,i] = logp
+                @. gradW += g[1]
+                @. gradσ += g[2]
+            end
+            logps = logpdf(p, X, A)
+            @test logps isa Matrix{T}
+            @test all(isapprox.(logps, blogps))
+
+            zlogps, gbf = pullback(p->sum(logpdf(p,X,A)),p)
+            @test zlogps isa T
+            @test zlogps ≈ sum(blogps)
+            g = gbf(1.0)[1]
+            @test all(isapprox.(g.W, gradW))
+            @test all(isapprox.(g.σ, gradσ))
+            g2 = gbf(1.0)[1]
+            @test all(isapprox.(g2.W, g.W))
+            @test all(isapprox.(g2.σ, g.σ))
+        end
+    end
+end
 
 @testset "Linear Normal Buffer Tests" begin
     num_actions = 2
@@ -198,7 +236,6 @@ end
     @test eltype(d.μ) == T
     a = Array{T,1}([1.0, 0.0])
     logp1 = logpdf!(buff, p, s, a)
-    println(logpdf(d, a))
     @test typeof(logp1) == T
     @test logp1 == logpdf(p, s, a)    
 
