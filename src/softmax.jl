@@ -7,7 +7,7 @@ struct StatelessSoftmax{T} <: AbstractStatelessPolicy where {T}
         return new{typeof(θ)}(θ)
     end
 
-    function StatelessSoftmax(num_actions::Int) where {T}
+    function StatelessSoftmax(num_actions::Int)
         return StatelessSoftmax(Float64, num_actions)
     end
 end
@@ -117,7 +117,7 @@ function rrule(::typeof(softmax!), x::AbstractVector)
     return x, softmax_pullback
 end
 
-function softmax(x::Vector{T}) where {T}
+function softmax(x::AbstractVector)
     maxx = maximum(x)
     y = x .- maxx
     @. y = exp(y)
@@ -126,7 +126,7 @@ function softmax(x::Vector{T}) where {T}
     return z
 end
 
-function rrule(::typeof(softmax), x::Vector{T}) where {T}
+function rrule(::typeof(softmax), x::AbstractVector)
     y = softmax(x)
     function softmax_pullback(ȳ)
         b = dot(ȳ, y)
