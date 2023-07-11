@@ -178,10 +178,10 @@ function rrule(::typeof(logpdf), π::StatelessSoftmax, a)
     logp = log(p[a])
     T = typeof(logp)
     function logpdf_stateless_softmax_pullback(Ȳ)
-        p *= -T(1.0)
-        p[a] += T(1.0)
-        p *= Ȳ
-        dθ = Tangent{typeof(π)}(θ=p)
+        dp = -one(T) * p
+        dp[a] += one(T)
+        dp *= Ȳ
+        dθ = Tangent{typeof(π)}(θ=dp)
         return NoTangent(), dθ, NoTangent()
     end
     return logp, logpdf_stateless_softmax_pullback
@@ -259,7 +259,7 @@ function rrule(π::LinearSoftmax, s)
         dp = @. (ȳ.p - b) * p
         ψ = zero(π.θ)
         G = ψ'
-        for i in 1:length(dp)
+        for i in eachindex(dp)
             @. G[i, :] = s * dp[i]
         end
         ds = zero(s)
@@ -273,47 +273,6 @@ end
 function (π::LinearSoftmax)(s::AbstractMatrix)
     return pdf_linsoftmax(π.θ, s)
 end
-
-# function pdf_linsoftmax(θ, s::AbstractMatrix)
-#     T = eltype(θ)
-#     num_a = size(θ,2)
-#     n = size(s,2)
-#     p = zeros(T, (num_a, n))
-#     mul!(p, θ', s)
-#     for i in 1:n
-#         pi = @view p[:, i]
-#         softmax!(pi)
-#     end
-#     return p
-# end
-
-# function rrule((::pdf_linsoftmax), θ, s::AbstractMatrix)
-#     T = eltype(θ)
-#     num_a = size(θ,2)
-#     n = size(s,2)
-#     p = zeros(T, (num_a, n))
-#     mul!(p, θ', s)
-#     for i in 1:n
-#         pi = @view p[:, i]
-#         softmax!(pi)
-#     end
-#     return p
-#     function linear_softmax_pdf_pullback(ȳ)
-#         b = dot(ȳ, p)
-#         dp = @. (ȳ - b) * p
-#         ψ = zero(θ)
-#         G = ψ'
-#         for i in 1:length(dp)
-#             @. G[i, :] = s * dp[i]
-#         end
-#         ds = zero(s)
-#         mul!(ds, π.θ, dp)
-#         dθ = Tangent{typeof(π)}(θ=ψ)
-#         return dθ, ds
-#     end
-#     return d, linear_softmax_dist_pullback
-# end
-
 
 function (π::LinearSoftmax)(buff::SoftmaxBuffer, s)
     mul!(buff.p, π.θ', s)
@@ -345,13 +304,14 @@ function rrule(::typeof(logpdf_softmax), θ, s, a)
     logp = log(p[a])
 
     function logpdf_linear_softmax_pullback(ȳ)
-        p *= -T(1.0)
-        p[a] += T(1.0)
-        p *= ȳ
+        dp = copy(p)
+        dp *= -T(1.0)
+        dp[a] += T(1.0)
+        dp *= ȳ
         ψ = zero(θ)
         G = ψ'
-        for i in 1:length(p)
-            @. G[i, :] = s * p[i]
+        for i in eachindex(dp)
+            @. G[i, :] = s * dp[i]
         end
         ds = zero(s)
         mul!(ds, θ, p)
@@ -360,18 +320,36 @@ function rrule(::typeof(logpdf_softmax), θ, s, a)
     return logp, logpdf_linear_softmax_pullback
 end
 
+function softmax_batch_out!(p::AbstractMatrix{T}, a::AbstractVector{Int}) where {T}
+    n = size(p, 2)
+    logps = zeros(T, n)
+    for i in 1:n
+        p_i = @view p[:, i]
+        softmax!(p_i)
+        logps[i] = log(p_i[a[i]])
+    end
+    return logps
+end
+
+function softmax_batch_out!(p::AbstractMatrix{T}, a::AbstractMatrix{Int}) where {T}
+    n = size(p, 2)
+    logps = zeros(T, (1,n))
+    for i in 1:n
+        p_i = @view p[:, i]
+        softmax!(p_i)
+        # logps[1,i] = log(p_i[a[1,i]])
+        logps[i] = log(p_i[a[i]])
+    end
+    return logps
+end
+
 function logpdf_softmax(θ, s::AbstractMatrix, a)
     T = eltype(θ)
     num_a = size(θ,2)
     n = size(s,2)
     p = zeros(T, (num_a, n))
     mul!(p, θ', s)
-    logps = zeros(T, (1,n))
-    for i in 1:n
-        p_i = @view p[:, i]
-        softmax!(p_i)
-        logps[1,i] = log(p_i[a[i]])
-    end
+    logps = softmax_batch_out!(p, a)
     return logps
 end
 
@@ -381,27 +359,23 @@ function rrule(::typeof(logpdf_softmax), θ, s::AbstractMatrix, a)
     n = size(s,2)
     p = zeros(T, (num_a, n))
     mul!(p, θ', s)
-    logps = zeros(T, (1,n))
-    for i in 1:n
-        p_i = @view p[:, i]
-        softmax!(p_i)
-        logps[1,i] = log(p_i[a[1,i]])
-    end
+    logps = softmax_batch_out!(p, a)
 
     function logpdf_linear_softmax_batch_pullback(ȳ)
         ψ = zero(θ)
         G = ψ'
+        dp = copy(p)
         for i in 1:n
-            p[:, i] *= -one(T)
-            p[a[1, i], i] += one(T)
-            p[:, i] *= ȳ[1, i]
+            @. dp[:, i] *= -one(T)
+            dp[a[i], i] += one(T)
+            @. dp[:, i] *= ȳ[i]
             for j in 1:num_a
                 x = @view s[:, i]
-                @. G[j, :] += x * p[j,i]
+                @. G[j, :] += x * dp[j,i]
             end
         end
         ds = zero(s)
-        mul!(ds, θ, p)
+        mul!(ds, θ, dp)
         return NoTangent(), ψ, ds, ZeroTangent()
     end
     return logps, logpdf_linear_softmax_batch_pullback
@@ -451,10 +425,9 @@ function rrule(::typeof(logpdf_softmax), θ, s::AbstractMatrix)
         # G = ψ'
         ds = zero(s)
         y2 = sum(ȳ, dims=1)
-        @. p = ȳ - p * y2
-        mul!(ψ, s, p')
-        mul!(ds, θ, p)
-        
+        dp = @. ȳ - p * y2
+        mul!(ψ, s, dp')
+        mul!(ds, θ, dp)
         
         return NoTangent(), ψ, ds, ZeroTangent()
     end

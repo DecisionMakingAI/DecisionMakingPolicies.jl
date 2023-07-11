@@ -239,7 +239,7 @@ end
 
 function logpdf(π::LinearNormal, s::AbstractMatrix, a)
     W, σ = π.W, π.σ
-    μ = W's
+    μ = W' * s
     logp = sum(logpdf_normal.(a, μ, σ), dims=1)
     return logp
 end
@@ -268,6 +268,12 @@ function grad_logpdf!(ψ, π::LinearNormal, s, a)
     logp = sum(logpdf_normal.(a, μ, σ))
 
     return logp, ψ
+end
+
+function grad_logpdf(π::LinearNormal, s, a)
+    G = zero(π.W), zero(π.σ)
+    logpa, ψ = grad_logpdf!(G, π, s, a)
+    return logpa, ψ
 end
 
 function grad_logpdf!(buff::NormalBuffer, π::LinearNormal, s, a)

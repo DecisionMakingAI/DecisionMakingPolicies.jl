@@ -132,18 +132,6 @@ end
     @test all(isapprox.(gpi[1], g2))
     @test logp4 == logp2
 
-    k = 3
-    sb = reshape(collect(T, 1:num_features*k), (num_features, k))
-    ab = rand(1:num_actions, (1, k))
-    gb = zero(p.θ)
-    logps = []
-    for i in 1:k
-        logp, ψ = grad_logpdf!(g, p, sb[:, i], ab[1, i])
-        push!(logps, logp)
-        @. gb += ψ[1]
-    end
-    zlogps, gbf = pullback(p->(logpdf(p,sb,ab)),p)
-
     A = zeros(Int,1)
     A2 = zeros(Int,2)
     _, logp4, _ = sample_with_trace!(g, A, p, s)
@@ -171,6 +159,74 @@ end
     
 end
 
+@testset "Linear Softmax Batch Tests" begin
+    num_actions = 2
+    num_features = 3
+    T = Float32
+    p = LinearSoftmax(T, num_features, num_actions)
+    vec(p.θ) .= collect(1:length(p.θ)) .* π ./ length(p.θ)
+    @test eltype(p.θ) == T
+    @test size(p.θ) == (num_features, num_actions)
+    num_samples = 1
+    for num_samples in [1, 11]
+        X = rand(T, num_features, num_samples)
+        A = rand(1:num_actions, num_samples) 
+        blogps = zeros(T, num_samples)
+        grad = zero(p.θ)
+        for i in 1:num_samples
+            logp, g = grad_logpdf(p, X[:, i], A[i])
+            blogps[i] = logp
+            @. grad += g[1]
+        end
+        logps = logpdf(p, X, A)
+        @test logps isa Vector{T}
+        @test all(isapprox.(logps, blogps))
+
+        logps = logpdf(p, X, reshape(A, (1,num_samples)))
+        @test logps isa Matrix{T}
+        @test size(logps) == (1,num_samples)
+        @test all(isapprox.(logps[1,:], blogps))
+        
+        zlogps, gbf = pullback(p->sum(logpdf(p,X,A)),p)
+        @test zlogps isa T
+        @test zlogps ≈ sum(blogps)
+        g = gbf(1.0)[1]
+        @test all(isapprox.(g.θ, grad))
+        g2 = gbf(1.0)[1]
+        @test all(isapprox.(g2.θ, g.θ))
+
+        zlogps, gbf = pullback(p->sum(logpdf(p,X,reshape(A,(1,num_samples)))),p)
+        @test zlogps isa T
+        @test zlogps ≈ sum(blogps)
+        g = gbf(1)[1]
+        @test all(isapprox.(g.θ, grad))
+        g2 = gbf(1)[1]
+        @test all(isapprox.(g.θ, g2.θ))
+
+        blogps = zeros(T, (num_actions, num_samples))
+        grad = zero(p.θ)
+        ag = rand(T, num_actions, num_samples)
+        for i in 1:num_samples
+            for a in 1:num_actions
+                logp, g = grad_logpdf(p, X[:, i], a)
+                blogps[a, i] = logp
+                @. grad += g[1] * ag[a,i]
+            end
+        end
+        
+        logps = logpdf(p, X)
+        @test logps isa Matrix{T}
+        @test all(isapprox.(logps, blogps))
+
+        zlogps, gbf = pullback(p->sum(logpdf(p,X) .* ag),p)
+        @test zlogps isa T
+        @test zlogps ≈ sum(blogps .* ag)
+        g = gbf(1)[1]
+        @test all(isapprox.(g.θ,grad))
+        g2 = gbf(1)[1]
+        @test all(isapprox.(g.θ, g2.θ))
+    end
+end
 
 @testset "Linear Softmax Buffer Tests" begin
     num_actions = 2
