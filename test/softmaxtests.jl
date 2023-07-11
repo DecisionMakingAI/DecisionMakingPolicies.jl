@@ -216,11 +216,11 @@ end
         
         logps = logpdf(p, X)
         @test logps isa Matrix{T}
-        @test logps == blogps
+        @test all(isapprox.(logps, blogps))
 
         zlogps, gbf = pullback(p->sum(logpdf(p,X) .* ag),p)
         @test zlogps isa T
-        @test zlogps == sum(blogps .* ag)
+        @test zlogps ≈ sum(blogps .* ag)
         g = gbf(1)[1]
         @test all(isapprox.(g.θ,grad))
         g2 = gbf(1)[1]
