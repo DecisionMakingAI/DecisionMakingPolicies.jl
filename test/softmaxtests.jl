@@ -180,28 +180,28 @@ end
         end
         logps = logpdf(p, X, A)
         @test logps isa Vector{T}
-        @test logps == blogps
+        @test all(isapprox.(logps, blogps))
 
         logps = logpdf(p, X, reshape(A, (1,num_samples)))
         @test logps isa Matrix{T}
         @test size(logps) == (1,num_samples)
-        @test logps[1,:] == blogps
+        @test all(isapprox.(logps[1,:], blogps))
         
         zlogps, gbf = pullback(p->sum(logpdf(p,X,A)),p)
         @test zlogps isa T
-        @test zlogps == sum(blogps)
+        @test zlogps ≈ sum(blogps)
         g = gbf(1.0)[1]
-        @test g.θ == grad
+        @test all(isapprox.(g.θ, grad))
         g2 = gbf(1.0)[1]
-        @test g2.θ == g.θ
+        @test all(isapprox.(g2.θ, g.θ))
 
         zlogps, gbf = pullback(p->sum(logpdf(p,X,reshape(A,(1,num_samples)))),p)
         @test zlogps isa T
-        @test zlogps == sum(blogps)
+        @test zlogps ≈ sum(blogps)
         g = gbf(1)[1]
-        @test g.θ == grad
+        @test all(isapprox.(g.θ, grad))
         g2 = gbf(1)[1]
-        @test g.θ == g2.θ
+        @test all(isapprox.(g.θ, g2.θ))
 
         blogps = zeros(T, (num_actions, num_samples))
         grad = zero(p.θ)
@@ -224,7 +224,7 @@ end
         g = gbf(1)[1]
         @test all(isapprox.(g.θ,grad))
         g2 = gbf(1)[1]
-        @test g.θ == g2.θ
+        @test all(isapprox.(g.θ, g2.θ))
     end
 end
 
