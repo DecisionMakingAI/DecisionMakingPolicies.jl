@@ -36,15 +36,14 @@ end
 
 struct LinearSoftmax{T} <: AbstractPolicy where {T}
     θ::T
+end
+function LinearSoftmax(::Type{T}, num_features::Int, num_actions::Int) where {T}
+    θ = zeros(T, (num_features, num_actions))
+    return new{typeof(θ)}(θ)
+end
 
-    function LinearSoftmax(::Type{T}, num_features::Int, num_actions::Int) where {T}
-        θ = zeros(T, (num_features, num_actions))
-        return new{typeof(θ)}(θ)
-    end
-
-    function LinearSoftmax(num_features::Int, num_actions::Int)
-        return LinearSoftmax(Float64, num_features, num_actions)
-    end
+function LinearSoftmax(num_features::Int, num_actions::Int)
+    return LinearSoftmax(Float64, num_features, num_actions)
 end
 
 function params(π::LinearSoftmax)
@@ -74,23 +73,24 @@ struct SoftmaxBuffer{TA, TP, TS} <: Any
     p::TP
     ψ::TS
 
-    function SoftmaxBuffer(π::StatelessSoftmax)
-        T = eltype(π.θ)
-        n = length(π.θ)
-        p = zeros(T, n)
-        ψ = (zero(π.θ),)
-        action = zeros(Int, 1)
-        return new{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
-    end
+end
 
-    function SoftmaxBuffer(π::LinearSoftmax)
-        T = eltype(π.θ)
-        n = size(π.θ, 2)
-        p = zeros(T, n)
-        ψ = (zero(π.θ),)
-        action = zeros(Int, 1)
-        return new{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
-    end
+function SoftmaxBuffer(π::StatelessSoftmax)
+    T = eltype(π.θ)
+    n = length(π.θ)
+    p = zeros(T, n)
+    ψ = (zero(π.θ),)
+    action = zeros(Int, 1)
+    return new{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
+end
+
+function SoftmaxBuffer(π::LinearSoftmax)
+    T = eltype(π.θ)
+    n = size(π.θ, 2)
+    p = zeros(T, n)
+    ψ = (zero(π.θ),)
+    action = zeros(Int, 1)
+    return new{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
 end
 
 function softmax!(out::AbstractVector, x::AbstractVector)
