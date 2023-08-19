@@ -39,7 +39,7 @@ struct LinearSoftmax{T} <: AbstractPolicy where {T}
 end
 function LinearSoftmax(::Type{T}, num_features::Int, num_actions::Int) where {T}
     θ = zeros(T, (num_features, num_actions))
-    return new{typeof(θ)}(θ)
+    return LinearSoftmax{typeof(θ)}(θ)
 end
 
 function LinearSoftmax(num_features::Int, num_actions::Int)
@@ -81,7 +81,7 @@ function SoftmaxBuffer(π::StatelessSoftmax)
     p = zeros(T, n)
     ψ = (zero(π.θ),)
     action = zeros(Int, 1)
-    return new{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
+    return SoftmaxBuffer{typeof(action),typeof(p), typeof(ψ)}(action, p, ψ)
 end
 
 function SoftmaxBuffer(π::LinearSoftmax)
@@ -90,7 +90,7 @@ function SoftmaxBuffer(π::LinearSoftmax)
     p = zeros(T, n)
     ψ = (zero(π.θ),)
     action = zeros(Int, 1)
-    return new{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
+    return SoftmaxBuffer{typeof(action),typeof(p),typeof(ψ)}(action, p, ψ)
 end
 
 function softmax!(out::AbstractVector, x::AbstractVector)
