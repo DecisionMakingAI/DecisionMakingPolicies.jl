@@ -1,60 +1,31 @@
 module DecisionMakingPolicies
 
-using DistributionsAD
+using Reexport
+import LuxCore
+@reexport using LuxCore: setup
+
 using LinearAlgebra
-import Distributions: logpdf, Categorical, Normal, MvNormal, params
+import Distributions: logpdf, Categorical, Normal, MvNormal
 using ChainRulesCore
-import ChainRulesCore: rrule, Tangent
+import ChainRulesCore: rrule
 import Zygote 
-import Flux
+import Random
+using ComponentArrays
 
 export logpdf, grad_logpdf, sample_with_trace
-export params, paramsvec, paramsfromvec!
 
-export ParameterizedPolicy, ParameterizedStatelessPolicy
-export AbstractPolicy, AbstractStatelessPolicy
-export StatelessSoftmax, LinearSoftmax, SoftmaxBuffer
-export StatelessNormal, LinearNormal, NormalBuffer
+export LinearSoftmax#, StatelessSoftmax
+# export StatelessNormal, LinearNormal, NormalBuffer
 export LinearPolicyWithBasis
-export LinearPolicyWithFluxBasis
-export BufferedPolicy 
+export LinearPolicyWithLuxBasis
 
-abstract type AbstractPolicy end
-abstract type AbstractStatelessPolicy <: AbstractPolicy end
-
-
-struct BufferedPolicy{TP,TB} <: AbstractPolicy where {TP,TB}
-    π::TP
-    buff::TB
-end
-
-function (π::BufferedPolicy)(s)
-    return π.π(π.buff, s)
-end
-
-function logpdf(π::BufferedPolicy, s, a)
-    return logpdf!(π.buff, π.π, s, a)
-end
-
-function grad_logpdf(π::BufferedPolicy, s, a)
-    logp, ψ = grad_logpdf!(π.buff, π.π, s, a)
-    return logp, ψ
-end
-
-function sample_with_trace(π::BufferedPolicy, s)
-    action, logp, ψ =  sample_with_trace!(π.buff, π.π, s)
-    return action, logp, ψ
-end
-
-function params(π::BufferedPolicy)
-    return params(π.π)
-end
 
 
 include("softmax.jl")
-include("normal.jl")
-include("linearbasis.jl")
+# include("normal.jl")
+# include("linearbasis.jl")
 # include("flux.jl")
-include("linearfluxbasis.jl")
+# include("linearfluxbasis.jl")
+# include("nonlinearlux.jl")
 
 end
