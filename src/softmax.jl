@@ -61,6 +61,48 @@ end
 
 @non_differentiable sample_discrete(Any)
 
+struct StatelessSoftmax{B,F1} <: LuxCore.AbstractExplicitLayer
+    num_actions::Int
+    init_weights::F1
+end
+
+function StatelessSoftmax(num_actions::Int; init_weights=LuxCore.zeros, buffered::Bool=false)
+    return StatelessSoftmax{typeof(Val(buffered)), typeof(init_weights)}(num_actions, init_weights)
+end
+
+function LuxCore.initialparameters(rng::Random.AbstractRNG, layer::StatelessSoftmax)
+    return (; weight=layer.init_weights(rng, layer.num_actions))
+end
+
+LuxCore.initialstates(rng::Random.AbstractRNG, layer::StatelessSoftmax) = NamedTuple()
+
+function LuxCore.initialstates(rng::Random.AbstractRNG, layer::StatelessSoftmax{Val{true}})
+    T = eltype(layer.init_weights(rng, 1,1))
+    action = zeros(Int, 1)
+    p = zeros(T, layer.num_actions)
+    ψ = (;weight = zeros(T, layer.num_actions)) |> ComponentArray
+    
+    return (;action=action, p=p, ψ=ψ)
+end
+
+LuxCore.parameterlength(layer::StatelessSoftmax) = layer.num_actions
+
+LuxCore.statelength(layer::StatelessSoftmax) = 0
+LuxCore.statelength(layer::StatelessSoftmax{Val{true}}) = layer.num_actions + layer.num_actions + 1
+
+function (layer::StatelessSoftmax)(params, states)
+    p = softmax(params.weight)
+    return Categorical(p), states
+end
+
+function (layer::StatelessSoftmax)(x, params, states)
+    return layer(params, states)
+end
+
+function logpdf(layer::LinearSoftmax, x, a, params, states)
+    return logpdf_softmax(params.weight, x, a), states
+end
+
 struct LinearSoftmax{B,F1} <: LuxCore.AbstractExplicitLayer
     in_dims::Int
     num_actions::Int
@@ -71,7 +113,6 @@ function LinearSoftmax(in_dims::Int, num_actions::Int; init_weights=LuxCore.zero
     return LinearSoftmax{typeof(Val(buffered)), typeof(init_weights)}(in_dims, num_actions, init_weights)
 end
 
-LuxCore.zeros(rng::Random.AbstractRNG, size...) = LuxCore.zeros(size...)
 
 function LuxCore.initialparameters(rng::Random.AbstractRNG, layer::LinearSoftmax)
     return (; weight=layer.init_weights(rng, layer.in_dims, layer.num_actions))

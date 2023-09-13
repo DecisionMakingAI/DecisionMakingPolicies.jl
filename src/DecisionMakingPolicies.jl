@@ -19,7 +19,7 @@ export LinearSoftmax#, StatelessSoftmax
 export LinearPolicyWithBasis
 export LinearPolicyWithLuxBasis
 
-
+LuxCore.zeros(rng::Random.AbstractRNG, size...) = LuxCore.zeros(size...)
 
 include("softmax.jl")
 # include("normal.jl")
