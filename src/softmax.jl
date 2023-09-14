@@ -66,7 +66,7 @@ struct StatelessSoftmax{B,F1} <: LuxCore.AbstractExplicitLayer
     init_weights::F1
 end
 
-function StatelessSoftmax(num_actions::Int; init_weights=LuxCore.zeros, buffered::Bool=false)
+function StatelessSoftmax(num_actions::Int; init_weights=zeros32, buffered::Bool=false)
     return StatelessSoftmax{typeof(Val(buffered)), typeof(init_weights)}(num_actions, init_weights)
 end
 
@@ -299,7 +299,7 @@ struct LinearSoftmax{B,F1} <: LuxCore.AbstractExplicitLayer
     init_weights::F1
 end
 
-function LinearSoftmax(in_dims::Int, num_actions::Int; init_weights=LuxCore.zeros, buffered::Bool=false)
+function LinearSoftmax(in_dims::Int, num_actions::Int; init_weights=zeros32, buffered::Bool=false)
     return LinearSoftmax{typeof(Val(buffered)), typeof(init_weights)}(in_dims, num_actions, init_weights)
 end
 

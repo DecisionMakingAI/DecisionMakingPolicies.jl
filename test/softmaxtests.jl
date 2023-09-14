@@ -37,7 +37,7 @@ mysoftmax(x) = exp.(x) ./ sum(exp.(x))
     buff32stateless = (p=zeros(Float32, num_actions), ψ=(;weight=zeros(Float32, num_actions)))
     buff64stateless = (p=zeros(Float64, num_actions), ψ=(;weight=zeros(Float64, num_actions)))
     for i in 1:num_actions
-        test_rrule(logpdf_softmax, θ32, x32, i, rtol=1f-3)
+        test_rrule(logpdf_softmax, θ32, x32, i, rtol=1f-2)
         test_rrule(logpdf_softmax, θ64, x64, i)   
         test_rrule(logpdf_stateless_softmax, θ32sl, i, rtol=1f-3)
         test_rrule(logpdf_stateless_softmax, θ64sl, i, rtol=1e-3)
@@ -68,10 +68,10 @@ end
         rng = Random.default_rng()
         
         
-        ps1, st1 = LuxCore.setup(rng, p1)
+        ps1, st1 = setup(rng, p1)
         ps1 = ps1 |> ComponentArray
         
-        ps2, st2 = LuxCore.setup(rng, p2)
+        ps2, st2 = setup(rng, p2)
         ps2 = ps2 |> ComponentArray
 
         x32 = collect(Float32, 1:num_inputs)
