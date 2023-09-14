@@ -14,7 +14,7 @@ using ComponentArrays
 
 export logpdf, grad_logpdf, sample_with_trace
 
-export LinearSoftmax#, StatelessSoftmax
+export LinearSoftmax, StatelessSoftmax
 # export StatelessNormal, LinearNormal, NormalBuffer
 export LinearPolicyWithBasis
 export LinearPolicyWithLuxBasis
