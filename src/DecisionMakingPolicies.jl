@@ -15,19 +15,18 @@ using ComponentArrays
 export logpdf, grad_logpdf, sample_with_trace
 
 export LinearSoftmax, StatelessSoftmax
-# export StatelessNormal, LinearNormal, NormalBuffer
+export StatelessNormal #, LinearNormal
 export LinearPolicyWithBasis
 export DeepPolicy
 
 LuxCore.zeros(rng::Random.AbstractRNG, size...) = LuxCore.zeros(size...)
 zeros32(rng::Random.AbstractRNG, size...) = LuxCore.zeros(Float32, size...)
 
-include("softmax.jl")
+include("softmax_stateless.jl")
+include("softmax_linear.jl")
+include("normal_stateless.jl")
+# include("normal_linear.jl")
 include("luxnetwork.jl")
-# include("normal.jl")
 include("linearbasis.jl")
-# include("flux.jl")
-# include("linearfluxbasis.jl")
-# include("nonlinearlux.jl")
 
 end
