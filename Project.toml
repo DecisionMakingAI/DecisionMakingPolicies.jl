@@ -1,7 +1,7 @@
 name = "DecisionMakingPolicies"
 uuid = "4cd5d487-2a85-4602-baee-1f5c94b6a44c"
 authors = ["Scott Jordan"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
