@@ -13,7 +13,7 @@ function LuxCore.initialparameters(rng::Random.AbstractRNG, layer::StatelessNorm
     μ = layer.init_mean(rng, layer.num_actions)
     logσ = layer.init_std(rng, layer.num_actions)
     if layer.num_actions == 1
-        (; μ=μ[1], logσ=logσ[1])
+        return (; μ=μ[1], logσ=logσ[1])
     else
         return (; μ=μ, logσ=logσ)
     end
@@ -49,12 +49,12 @@ function comp_sigma(logσ::Real, states)
     return σ
 end
 
-function comp_sigma(logσ::AbstractVector, states::NamedTuple{(:action, :σ, :ψ)})
+function comp_sigma(logσ::AbstractVector, states::Union{NamedTuple{(:action, :σ, :ψ)},NamedTuple{(:action, :μ, :σ, :dμ, :ψ)}})
     @. states.σ = exp(logσ)
     return states.σ
 end
 
-function rrule(::typeof(comp_sigma), logσ::AbstractVector, states::NamedTuple{(:action, :σ, :ψ)})
+function rrule(::typeof(comp_sigma), logσ::AbstractVector, states::Union{NamedTuple{(:action, :σ, :ψ)},NamedTuple{(:action, :μ, :σ, :dμ, :ψ)}})
     @. states.σ = exp(logσ)
     function comp_sigma_pullback(ȳ)
         dσ = @thunk begin
