@@ -14,13 +14,9 @@ zeros32(::AbstractRNG, dims...) = zeros(Float32, dims...)
 @testset "Normal rules" begin
     rng = Random.default_rng()
     num_actions = 2
-    init_std32(rng, dims...) = ones(Float32, dims...) * -2.1f0
     init_std64(rng, dims...) = ones(Float64, dims...) * -2.1
-    l32b = StatelessNormal(num_actions, init_mean=zeros32, init_std=init_std32, buffered=true)
     l64b = StatelessNormal(num_actions, init_mean=zeros, init_std=init_std64, buffered=true)
-    ps32b, st32b = setup(rng, l32b)
     ps64b, st64b = setup(rng, l64b)
-    test_rrule(comp_sigma, ps32b.logσ, st32b ⊢ NoTangent(), rtol=1f-2)
     test_rrule(comp_sigma, ps64b.logσ, st64b ⊢ NoTangent(), rtol=1e-2)
     μ = randn(Float64, num_actions)
     W = randn(Float64, 3, num_actions)

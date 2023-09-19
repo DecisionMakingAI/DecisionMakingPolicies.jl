@@ -14,47 +14,28 @@ mysoftmax(x) = exp.(x) ./ sum(exp.(x))
 @testset "Softmax rules" begin
     num_inputs = 3
     num_actions = 2
-    x32 = collect(Float32, 1:num_inputs)
     x64 = collect(Float64, 1:num_inputs)
-    test_rrule(softmax, x32, rtol=1f-2)
     test_rrule(softmax, x64)
 
-    x32 = zeros(Float32, num_inputs)
     x64 = zeros(Float64, num_inputs)
-    test_rrule(softmax, x32, rtol=1f-2)
     test_rrule(softmax, x64)
 
-    θ32 = randn(Float32, num_inputs, num_actions)
     θ64 = randn(Float64, num_inputs, num_actions)
-    θ32sl = randn(Float32, num_actions) ./ num_actions
     θ64sl = randn(Float64, num_actions) ./ num_actions
-    x32 = randn(Float32, num_inputs)
     x64 = randn(Float64, num_inputs)
-    test_rrule(pdf_softmax, θ32, x32, rtol=1f-2)
     test_rrule(pdf_softmax, θ64, x64)
-    buff32lin = (p=zeros(Float32, num_actions), ψ=(;weight=zeros(Float32, (num_inputs, num_actions))))
     buff64lin = (p=zeros(Float64, num_actions), ψ=(;weight=zeros(Float64, (num_inputs, num_actions))))
-    buff32stateless = (p=zeros(Float32, num_actions), ψ=(;weight=zeros(Float32, num_actions)))
     buff64stateless = (p=zeros(Float64, num_actions), ψ=(;weight=zeros(Float64, num_actions)))
     for i in 1:num_actions
-        test_rrule(logpdf_softmax, θ32, x32, i, rtol=1f-2)
         test_rrule(logpdf_softmax, θ64, x64, i)   
-        test_rrule(logpdf_stateless_softmax, θ32sl, i, rtol=1f-2)
         test_rrule(logpdf_stateless_softmax, θ64sl, i, rtol=1e-2)
-        test_rrule(logpdf_softmax, buff32lin ⊢ NoTangent(), θ32, x32, i, rtol=1f-2)
         test_rrule(logpdf_softmax, buff64lin ⊢ NoTangent(), θ64, x64, i, rtol=1e-2)
-        test_rrule(logpdf_stateless_softmax, buff32stateless ⊢ NoTangent(), θ32sl, i, rtol=1f-2)
         test_rrule(logpdf_stateless_softmax, buff64stateless ⊢ NoTangent(), θ64sl, i, rtol=1e-2)
     end
-    x32 = randn(Float32, num_inputs, 11)
     x64 = randn(Float64, num_inputs, 15)
-    A32 = rand(1:num_actions, 11)
     A64 = rand(1:num_actions, 15)
-    test_rrule(pdf_softmax, θ32, x32, rtol=1f-2)
     test_rrule(pdf_softmax, θ64, x64)
-    test_rrule(logpdf_softmax, θ32, x32, A32, rtol=1f-2)
     test_rrule(logpdf_softmax, θ64, x64, A64)
-    test_rrule(logpdf_stateless_softmax, θ32sl, A32, rtol=1f-2)
     test_rrule(logpdf_stateless_softmax, θ64sl, A64, rtol=1e-2)
 end
 

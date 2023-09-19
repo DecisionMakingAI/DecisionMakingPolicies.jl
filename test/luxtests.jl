@@ -101,7 +101,7 @@ using ComponentArrays
     @test logp ≈ logpl
     @test grad.linear ≈ gl
     @test grad.basis ≈ zero(grad.basis)
-    @. ps.linear.weight = randn() / (num_hidden * num_actions)
+    @. ps.linear.weight = randn((Float32,)) / (num_hidden * num_actions)
     logpl, gl, stl = grad_logpdf(l, netout, a32, ps.linear, st.linear)
     logp, grad, st = grad_logpdf(policy, x32, a32, ps, st)
     @test logp ≈ logpl
