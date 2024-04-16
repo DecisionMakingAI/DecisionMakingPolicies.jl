@@ -5,7 +5,7 @@ struct StatelessNormal{B,F1,F2} <: LuxCore.AbstractExplicitLayer
     init_std::F2
 end
 
-function StatelessNormal(num_actions::Int; init_mean=zeros32, init_std=zero32, buffered::Bool=false)
+function StatelessNormal(num_actions::Int; init_mean=zeros32, init_std=zeros32, buffered::Bool=false)
     return StatelessNormal{typeof(Val(buffered)), typeof(init_mean), typeof(init_std)}(num_actions, init_mean, init_std)
 end
 
